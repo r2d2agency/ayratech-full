@@ -457,6 +457,7 @@ export function useCRMDealMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm-deals"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-deals-by-phone"] });
       queryClient.invalidateQueries({ queryKey: ["crm-deal"] });
       toast({ title: "Negociação atualizada" });
     },
