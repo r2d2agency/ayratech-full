@@ -49,6 +49,9 @@ export interface TaskCard {
   contact_phone?: string;
   contact_name?: string;
   crm_task_id?: string;
+  project_id?: string;
+  project_title?: string;
+  project_stage?: string;
   status: string;
   completed_at?: string;
   checklist_count?: number;

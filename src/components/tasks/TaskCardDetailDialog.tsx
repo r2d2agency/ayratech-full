@@ -15,16 +15,29 @@ import {
 } from "@/hooks/use-task-boards";
 import { useUpload } from "@/hooks/use-upload";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOrganizations } from "@/hooks/use-organizations";
+import { useCRMDealsSearch, CRMDeal } from "@/hooks/use-crm";
+import { useProjects } from "@/hooks/use-projects";
+import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Calendar, CheckSquare, Paperclip, MessageSquare, User, Trash2, Plus,
   Send, Image, FileText, X, Clock, Star, Upload, ListChecks, Save, Loader2,
-  CircleCheck, Circle, MoreHorizontal
+  CircleCheck, Circle, MoreHorizontal, Search, Briefcase, FolderKanban, Phone, Link2
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+interface ChatContact {
+  id: string;
+  name: string | null;
+  phone: string;
+  jid: string | null;
+  connection_id: string;
+  connection_name?: string;
+}
+
+import { Project } from "@/hooks/use-projects";
 
 interface TaskCardDetailDialogProps {
   cardId: string | null;
@@ -54,6 +67,22 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Contact search
+  const [contactSearch, setContactSearch] = useState("");
+  const [contactResults, setContactResults] = useState<ChatContact[]>([]);
+  const [searchingContacts, setSearchingContacts] = useState(false);
+  const [showContactSearch, setShowContactSearch] = useState(false);
+
+  // Deal search
+  const [dealSearch, setDealSearch] = useState("");
+  const { data: dealResults, isLoading: searchingDeals } = useCRMDealsSearch(dealSearch.length >= 2 ? dealSearch : undefined);
+  const [showDealSearch, setShowDealSearch] = useState(false);
+
+  // Projects
+  const { data: allProjects } = useProjects();
+  const [showProjectSearch, setShowProjectSearch] = useState(false);
+  const [projectSearch, setProjectSearch] = useState("");
+
   useEffect(() => {
     if (card) {
       setEditTitle(card.title);
@@ -61,6 +90,20 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
       setHasChanges(false);
     }
   }, [card]);
+
+  // Contact search effect
+  useEffect(() => {
+    if (contactSearch.length < 2) { setContactResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearchingContacts(true);
+      try {
+        const data = await api<ChatContact[]>(`/api/chat/contacts?search=${encodeURIComponent(contactSearch)}`);
+        setContactResults(data);
+      } catch { setContactResults([]); }
+      setSearchingContacts(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [contactSearch]);
 
   if (!cardId) return null;
 
@@ -81,6 +124,38 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
   const handleUpdateField = (field: string, value: any) => {
     if (!cardId) return;
     cardMut.updateCard.mutate({ id: cardId, [field]: value } as any);
+  };
+
+  const handleSelectContact = (contact: ChatContact) => {
+    handleUpdateField('contact_name', contact.name || contact.phone);
+    handleUpdateField('contact_phone', contact.phone);
+    setShowContactSearch(false);
+    setContactSearch("");
+  };
+
+  const handleClearContact = () => {
+    handleUpdateField('contact_name', null);
+    handleUpdateField('contact_phone', null);
+  };
+
+  const handleLinkDeal = (deal: CRMDeal) => {
+    handleUpdateField('deal_id', deal.id);
+    setShowDealSearch(false);
+    setDealSearch("");
+  };
+
+  const handleUnlinkDeal = () => {
+    handleUpdateField('deal_id', null);
+  };
+
+  const handleLinkProject = (project: Project) => {
+    handleUpdateField('project_id', project.id);
+    setShowProjectSearch(false);
+    setProjectSearch("");
+  };
+
+  const handleUnlinkProject = () => {
+    handleUpdateField('project_id', null);
   };
 
   const handleAddChecklist = (templateId?: string) => {
@@ -134,6 +209,10 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
     { value: "urgent", label: "Urgente", color: "text-red-600" },
   ];
 
+  const filteredProjects = allProjects?.filter(p =>
+    !projectSearch || p.title.toLowerCase().includes(projectSearch.toLowerCase())
+  ) || [];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
@@ -144,8 +223,8 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
           </div>
         ) : (
           <div className="flex flex-col h-full max-h-[90vh]">
-            {/* Header */}
-            <DialogHeader className="p-4 pb-2 border-b">
+            {/* Header - pr-10 to avoid overlap with dialog close X */}
+            <DialogHeader className="p-4 pb-2 border-b pr-12">
               <div className="flex items-start gap-3">
                 {/* Status toggle */}
                 <button onClick={handleToggleStatus} className="mt-1 shrink-0" title={card.status === 'completed' ? 'Marcar como pendente' : 'Marcar como concluído'}>
@@ -155,14 +234,14 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
                     <Circle className="h-6 w-6 text-muted-foreground hover:text-green-500 transition-colors" />
                   )}
                 </button>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <Input
                     value={editTitle}
                     onChange={e => { setEditTitle(e.target.value); setHasChanges(true); }}
                     className="text-lg font-bold border-none p-0 h-auto focus-visible:ring-0 shadow-none"
                     placeholder="Título do card"
                   />
-                  <div className="flex items-center gap-2 mt-1">
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
                     <Badge variant={card.status === 'completed' ? 'default' : 'secondary'} className={cn("text-xs", card.status === 'completed' && "bg-green-500/10 text-green-600 border-green-500/20")}>
                       {card.status === 'completed' ? 'Concluído' : 'Pendente'}
                     </Badge>
@@ -172,12 +251,10 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {/* Save button */}
                   <Button size="sm" variant={hasChanges ? "default" : "outline"} className="h-8 gap-1.5" onClick={handleSaveDetails} disabled={isSaving || !hasChanges}>
                     {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                     {isSaving ? "Salvando..." : "Salvar"}
                   </Button>
-                  {/* Discrete delete via dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -264,7 +341,6 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
                             </div>
                           ))}
                         </div>
-                        {/* Add item */}
                         <div className="flex gap-2">
                           <Input
                             value={newItemTitles[checklist.id] || ""}
@@ -471,21 +547,182 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
                     </label>
                   </div>
 
-                  {/* Contact */}
+                  <Separator />
+
+                  {/* Contact - searchable from connections */}
                   <div>
-                    <label className="text-xs text-muted-foreground">Contato vinculado</label>
-                    <Input
-                      value={card.contact_name || ""}
-                      onChange={e => handleUpdateField('contact_name', e.target.value || null)}
-                      placeholder="Nome do contato"
-                      className="h-8 mt-1 text-xs"
-                    />
-                    <Input
-                      value={card.contact_phone || ""}
-                      onChange={e => handleUpdateField('contact_phone', e.target.value || null)}
-                      placeholder="Telefone"
-                      className="h-8 mt-1 text-xs"
-                    />
+                    <label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Phone className="h-3 w-3" /> Contato vinculado
+                    </label>
+                    {card.contact_name || card.contact_phone ? (
+                      <div className="mt-1 p-2 border rounded-md flex items-center gap-2">
+                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
+                          {(card.contact_name || card.contact_phone || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{card.contact_name || "Sem nome"}</p>
+                          {card.contact_phone && <p className="text-xs text-muted-foreground">{card.contact_phone}</p>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleClearContact}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : showContactSearch ? (
+                      <div className="mt-1 space-y-1">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            value={contactSearch}
+                            onChange={e => setContactSearch(e.target.value)}
+                            placeholder="Buscar por nome ou telefone..."
+                            className="h-8 text-xs pl-7"
+                            autoFocus
+                          />
+                        </div>
+                        {searchingContacts && <p className="text-xs text-muted-foreground">Buscando...</p>}
+                        {contactResults.length > 0 && (
+                          <div className="border rounded-md max-h-32 overflow-y-auto">
+                            {contactResults.slice(0, 10).map(c => (
+                              <button
+                                key={c.id}
+                                className="w-full text-left px-2 py-1.5 hover:bg-muted/50 flex items-center gap-2 text-sm"
+                                onClick={() => handleSelectContact(c)}
+                              >
+                                <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-xs shrink-0">
+                                  {(c.name || c.phone).charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-medium">{c.name || c.phone}</p>
+                                  <p className="text-xs text-muted-foreground">{c.phone}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 text-xs w-full" onClick={() => setShowContactSearch(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full h-8 mt-1 text-xs" onClick={() => setShowContactSearch(true)}>
+                        <Search className="h-3 w-3 mr-1" /> Buscar contato
+                      </Button>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Link Deal */}
+                  <div>
+                    <label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Briefcase className="h-3 w-3" /> Negociação vinculada
+                    </label>
+                    {card.deal_id && card.deal_title ? (
+                      <div className="mt-1 p-2 border rounded-md flex items-center gap-2">
+                        <Briefcase className="h-4 w-4 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{card.deal_title}</p>
+                          {card.company_name && <p className="text-xs text-muted-foreground">{card.company_name}</p>}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleUnlinkDeal}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : showDealSearch ? (
+                      <div className="mt-1 space-y-1">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            value={dealSearch}
+                            onChange={e => setDealSearch(e.target.value)}
+                            placeholder="Buscar negociação..."
+                            className="h-8 text-xs pl-7"
+                            autoFocus
+                          />
+                        </div>
+                        {searchingDeals && <p className="text-xs text-muted-foreground">Buscando...</p>}
+                        {dealResults && dealResults.length > 0 && (
+                          <div className="border rounded-md max-h-32 overflow-y-auto">
+                            {dealResults.slice(0, 8).map((d: CRMDeal) => (
+                              <button
+                                key={d.id}
+                                className="w-full text-left px-2 py-1.5 hover:bg-muted/50 flex items-center gap-2 text-sm"
+                                onClick={() => handleLinkDeal(d)}
+                              >
+                                <Briefcase className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-medium">{d.title}</p>
+                                  <p className="text-xs text-muted-foreground">{d.company_name || 'Sem empresa'}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 text-xs w-full" onClick={() => setShowDealSearch(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full h-8 mt-1 text-xs" onClick={() => setShowDealSearch(true)}>
+                        <Link2 className="h-3 w-3 mr-1" /> Vincular negociação
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Link Project */}
+                  <div>
+                    <label className="text-xs text-muted-foreground flex items-center gap-1">
+                      <FolderKanban className="h-3 w-3" /> Projeto vinculado
+                    </label>
+                    {card.project_id && card.project_title ? (
+                        <div className="mt-1 p-2 border rounded-md flex items-center gap-2">
+                          <FolderKanban className="h-4 w-4 text-primary shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{card.project_title}</p>
+                            <p className="text-xs text-muted-foreground">{card.project_stage || 'Sem etapa'}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleUnlinkProject}>
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                    ) : showProjectSearch ? (
+                      <div className="mt-1 space-y-1">
+                        <div className="relative">
+                          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            value={projectSearch}
+                            onChange={e => setProjectSearch(e.target.value)}
+                            placeholder="Buscar projeto..."
+                            className="h-8 text-xs pl-7"
+                            autoFocus
+                          />
+                        </div>
+                        {filteredProjects.length > 0 && (
+                          <div className="border rounded-md max-h-32 overflow-y-auto">
+                            {filteredProjects.slice(0, 8).map((p: any) => (
+                              <button
+                                key={p.id}
+                                className="w-full text-left px-2 py-1.5 hover:bg-muted/50 flex items-center gap-2 text-sm"
+                                onClick={() => handleLinkProject(p)}
+                              >
+                                <FolderKanban className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="truncate text-xs font-medium">{p.title}</p>
+                                  <p className="text-xs text-muted-foreground">{p.stage_name || 'Sem etapa'}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <Button variant="ghost" size="sm" className="h-7 text-xs w-full" onClick={() => setShowProjectSearch(false)}>
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button variant="outline" size="sm" className="w-full h-8 mt-1 text-xs" onClick={() => setShowProjectSearch(true)}>
+                        <Link2 className="h-3 w-3 mr-1" /> Vincular projeto
+                      </Button>
+                    )}
                   </div>
 
                   <Separator />
@@ -496,7 +733,6 @@ export function TaskCardDetailDialog({ cardId, boardId, isGlobal, open, onOpenCh
                     <p>Criado em: {format(parseISO(card.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                     {card.completed_at && <p>Concluído: {format(parseISO(card.completed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>}
                   </div>
-
                 </div>
               </div>
             </ScrollArea>
