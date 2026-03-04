@@ -51,6 +51,7 @@ router.use(authenticate);
         contact_phone VARCHAR(50),
         contact_name VARCHAR(255),
         crm_task_id UUID,
+        project_id UUID,
         status VARCHAR(20) DEFAULT 'open',
         completed_at TIMESTAMPTZ,
         created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -133,6 +134,8 @@ router.use(authenticate);
     await query(`CREATE INDEX IF NOT EXISTS idx_task_card_attachments_card ON task_card_attachments(card_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_task_card_comments_card ON task_card_comments(card_id)`);
     await query(`CREATE INDEX IF NOT EXISTS idx_checklist_templates_org ON checklist_templates(organization_id)`);
+    // Self-heal: add project_id column if missing
+    try { await query(`ALTER TABLE task_cards ADD COLUMN IF NOT EXISTS project_id UUID`); } catch {}
     logInfo('[TaskBoards] Self-healing tables check complete');
   } catch (e) {
     logError('[TaskBoards] Self-healing error', e);
@@ -422,12 +425,14 @@ router.get('/cards/:id', async (req, res) => {
   try {
     const result = await query(
       `SELECT tc.*, u.name as assigned_name, cu.name as creator_name,
-              d.title as deal_title, comp.name as company_name
+              d.title as deal_title, comp.name as company_name,
+              p.title as project_title, p.stage_name as project_stage
        FROM task_cards tc
        LEFT JOIN users u ON u.id = tc.assigned_to
        LEFT JOIN users cu ON cu.id = tc.created_by
        LEFT JOIN crm_deals d ON d.id = tc.deal_id
        LEFT JOIN crm_companies comp ON comp.id = tc.company_id
+       LEFT JOIN projects p ON p.id = tc.project_id
        WHERE tc.id = $1`,
       [req.params.id]
     );
@@ -511,13 +516,13 @@ router.post('/cards', async (req, res) => {
 // Update card
 router.put('/cards/:id', async (req, res) => {
   try {
-    const { title, description, assigned_to, due_date, start_date, priority, cover_image_url, deal_id, company_id, contact_phone, contact_name, status } = req.body;
+    const { title, description, assigned_to, due_date, start_date, priority, cover_image_url, deal_id, company_id, contact_phone, contact_name, status, project_id } = req.body;
 
     const updates = [];
     const params = [];
     let paramIdx = 1;
 
-    const fields = { title, description, assigned_to, due_date, start_date, priority, cover_image_url, deal_id, company_id, contact_phone, contact_name, status };
+    const fields = { title, description, assigned_to, due_date, start_date, priority, cover_image_url, deal_id, company_id, contact_phone, contact_name, status, project_id };
     for (const [key, val] of Object.entries(fields)) {
       if (val !== undefined) {
         updates.push(`${key} = $${paramIdx}`);
