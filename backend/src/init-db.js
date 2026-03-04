@@ -1756,6 +1756,31 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS idx_crm_companies_owner ON crm_companies(owner_id);
 CREATE INDEX IF NOT EXISTS idx_crm_companies_group ON crm_companies(group_id);
+
+-- Add extended company fields
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS razao_social VARCHAR(255);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS nome_fantasia VARCHAR(255);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS inscricao_estadual VARCHAR(30);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS inscricao_municipal VARCHAR(30);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS porte VARCHAR(50);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
+
+DO $$ BEGIN
+  ALTER TABLE crm_companies ADD COLUMN IF NOT EXISTS cnae VARCHAR(100);
+EXCEPTION WHEN duplicate_column THEN null; WHEN undefined_table THEN null; END $$;
 `;
 
 // Step 21: CRM Prospects

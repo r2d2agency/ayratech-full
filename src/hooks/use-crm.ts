@@ -46,7 +46,13 @@ export interface CRMFunnel {
 export interface CRMCompany {
   id: string;
   name: string;
+  razao_social?: string;
+  nome_fantasia?: string;
   cnpj?: string;
+  inscricao_estadual?: string;
+  inscricao_municipal?: string;
+  porte?: string;
+  cnae?: string;
   email?: string;
   phone?: string;
   website?: string;

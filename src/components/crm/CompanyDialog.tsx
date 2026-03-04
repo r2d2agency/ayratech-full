@@ -39,7 +39,13 @@ interface CompanyDialogProps {
 export function CompanyDialog({ company, open, onOpenChange, onCreated }: CompanyDialogProps) {
   const [formData, setFormData] = useState({
     name: "",
+    razao_social: "",
+    nome_fantasia: "",
     cnpj: "",
+    inscricao_estadual: "",
+    inscricao_municipal: "",
+    porte: "",
+    cnae: "",
     email: "",
     phone: "",
     website: "",
@@ -93,7 +99,13 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
     if (company) {
       setFormData({
         name: company.name || "",
+        razao_social: company.razao_social || "",
+        nome_fantasia: company.nome_fantasia || "",
         cnpj: company.cnpj || "",
+        inscricao_estadual: company.inscricao_estadual || "",
+        inscricao_municipal: company.inscricao_municipal || "",
+        porte: company.porte || "",
+        cnae: company.cnae || "",
         email: company.email || "",
         phone: company.phone || "",
         website: company.website || "",
@@ -111,7 +123,13 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
     } else {
       setFormData({
         name: "",
+        razao_social: "",
+        nome_fantasia: "",
         cnpj: "",
+        inscricao_estadual: "",
+        inscricao_municipal: "",
+        porte: "",
+        cnae: "",
         email: "",
         phone: "",
         website: "",
@@ -147,9 +165,7 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
 
       // Build details text from extra info
       const details: string[] = [];
-      if (emp.natureza_descricao) details.push(`Natureza: ${emp.natureza_descricao}`);
       if (emp.capital_social) details.push(`Capital Social: R$ ${parseFloat(emp.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`);
-      if (est.cnae_principal) details.push(`CNAE: ${est.cnae_principal}`);
       if (est.situacao_cadastral) {
         const sit = est.situacao_cadastral === '02' ? 'Ativa' : est.situacao_cadastral === '08' ? 'Baixada' : est.situacao_cadastral;
         details.push(`Situação: ${sit}`);
@@ -169,7 +185,11 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
 
       setFormData(prev => ({
         ...prev,
-        name: prev.name || emp.razao_social || est.nome_fantasia || '',
+        name: prev.name || est.nome_fantasia || emp.razao_social || '',
+        razao_social: prev.razao_social || emp.razao_social || '',
+        nome_fantasia: prev.nome_fantasia || est.nome_fantasia || '',
+        porte: prev.porte || emp.natureza_descricao || '',
+        cnae: prev.cnae || est.cnae_principal || '',
         address: prev.address || address,
         city: prev.city || est.municipio_nome || '',
         state: prev.state || est.uf || '',
@@ -248,12 +268,63 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
 
         <ScrollArea className="flex-1 min-h-0 max-h-[calc(90vh-140px)]">
           <div className="space-y-4 p-1 pr-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>CNPJ</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={formData.cnpj}
+                    onChange={(e) => handleChange("cnpj", e.target.value)}
+                    placeholder="00.000.000/0000-00"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCnpjLookup}
+                    disabled={lookingUpCnpj || !formData.cnpj.replace(/\D/g, '').length}
+                    title="Consultar CNPJ"
+                  >
+                    {lookingUpCnpj ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => handleChange("phone", e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Razão Social</Label>
+                <Input
+                  value={formData.razao_social}
+                  onChange={(e) => handleChange("razao_social", e.target.value)}
+                  placeholder="Razão social da empresa"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Nome Fantasia</Label>
+                <Input
+                  value={formData.nome_fantasia}
+                  onChange={(e) => handleChange("nome_fantasia", e.target.value)}
+                  placeholder="Nome fantasia"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Nome da empresa *</Label>
               <Input
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder="Nome da empresa"
+                placeholder="Nome de exibição da empresa"
               />
             </div>
 
@@ -287,82 +358,40 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
               </Select>
             </div>
 
-            {/* Responsável e Grupo */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Vendedor Responsável
-                </Label>
-                <Select
-                  value={formData.owner_id || "none"}
-                  onValueChange={(value) => handleChange("owner_id", value === "none" ? "" : value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {orgMembers?.map((member) => (
-                      <SelectItem key={member.id} value={member.id}>
-                        {member.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Porte / Tipo</Label>
+                <Input
+                  value={formData.porte}
+                  onChange={(e) => handleChange("porte", e.target.value)}
+                  placeholder="MEI, ME, EPP, Ltda, SA..."
+                />
               </div>
               <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Grupo
-                </Label>
-                <Select
-                  value={formData.group_id || "none"}
-                  onValueChange={(value) => handleChange("group_id", value === "none" ? "" : value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {groups?.map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
-                        {group.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>CNAE / Atividade</Label>
+                <Input
+                  value={formData.cnae}
+                  onChange={(e) => handleChange("cnae", e.target.value)}
+                  placeholder="Código ou descrição"
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>CNPJ</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={formData.cnpj}
-                    onChange={(e) => handleChange("cnpj", e.target.value)}
-                    placeholder="00.000.000/0000-00"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCnpjLookup}
-                    disabled={lookingUpCnpj || !formData.cnpj.replace(/\D/g, '').length}
-                    title="Consultar CNPJ"
-                  >
-                    {lookingUpCnpj ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                  </Button>
-                </div>
+                <Label>Inscrição Estadual</Label>
+                <Input
+                  value={formData.inscricao_estadual}
+                  onChange={(e) => handleChange("inscricao_estadual", e.target.value)}
+                  placeholder="IE"
+                />
               </div>
               <div className="space-y-2">
-                <Label>Telefone</Label>
+                <Label>Inscrição Municipal</Label>
                 <Input
-                  value={formData.phone}
-                  onChange={(e) => handleChange("phone", e.target.value)}
-                  placeholder="(00) 00000-0000"
+                  value={formData.inscricao_municipal}
+                  onChange={(e) => handleChange("inscricao_municipal", e.target.value)}
+                  placeholder="IM"
                 />
               </div>
             </div>
@@ -421,6 +450,54 @@ export function CompanyDialog({ company, open, onOpenChange, onCreated }: Compan
                   onChange={(e) => handleChange("zip_code", e.target.value)}
                   placeholder="00000-000"
                 />
+              </div>
+            </div>
+
+            {/* Responsável e Grupo */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Vendedor Responsável
+                </Label>
+                <Select
+                  value={formData.owner_id || "none"}
+                  onValueChange={(value) => handleChange("owner_id", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {orgMembers?.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Grupo
+                </Label>
+                <Select
+                  value={formData.group_id || "none"}
+                  onValueChange={(value) => handleChange("group_id", value === "none" ? "" : value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {groups?.map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
