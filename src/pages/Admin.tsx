@@ -66,6 +66,7 @@ interface Plan {
   has_group_secretary: boolean;
   has_ghost: boolean;
   has_projects: boolean;
+  has_lead_gleego: boolean;
   price: number;
   billing_period: string;
   is_active: boolean;
@@ -167,6 +168,7 @@ export default function Admin() {
   const [newPlanGroupSecretary, setNewPlanGroupSecretary] = useState(false);
   const [newPlanGhost, setNewPlanGhost] = useState(false);
   const [newPlanProjects, setNewPlanProjects] = useState(false);
+  const [newPlanLeadGleego, setNewPlanLeadGleego] = useState(false);
   const [newPlanPeriod, setNewPlanPeriod] = useState('monthly');
   const [newPlanVisibleOnSignup, setNewPlanVisibleOnSignup] = useState(false);
   const [newPlanTrialDays, setNewPlanTrialDays] = useState('3');
@@ -357,6 +359,7 @@ export default function Admin() {
       has_group_secretary: newPlanGroupSecretary,
       has_ghost: newPlanGhost,
       has_projects: newPlanProjects,
+      has_lead_gleego: newPlanLeadGleego,
       price: parseFloat(newPlanPrice) || 0,
       billing_period: newPlanPeriod,
       visible_on_signup: newPlanVisibleOnSignup,
@@ -395,6 +398,7 @@ export default function Admin() {
     setNewPlanGroupSecretary(false);
     setNewPlanGhost(false);
     setNewPlanProjects(false);
+    setNewPlanLeadGleego(false);
     setNewPlanPeriod('monthly');
     setNewPlanVisibleOnSignup(false);
     setNewPlanTrialDays('3');
@@ -424,6 +428,7 @@ export default function Admin() {
       has_group_secretary: editingPlan.has_group_secretary,
       has_ghost: editingPlan.has_ghost,
       has_projects: editingPlan.has_projects,
+      has_lead_gleego: editingPlan.has_lead_gleego,
       price: editingPlan.price,
       billing_period: editingPlan.billing_period,
       is_active: editingPlan.is_active,
@@ -978,6 +983,16 @@ export default function Admin() {
                           onCheckedChange={setNewPlanProjects}
                         />
                       </div>
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-2">
+                          <Label htmlFor="lead-gleego-switch">Lead Gleego</Label>
+                        </div>
+                        <Switch
+                          id="lead-gleego-switch"
+                          checked={newPlanLeadGleego}
+                          onCheckedChange={setNewPlanLeadGleego}
+                        />
+                      </div>
                     </div>
                     <div className="border-t pt-4 space-y-4">
                       <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-3">
@@ -1118,6 +1133,9 @@ export default function Admin() {
                         )}
                         {plan.has_projects && (
                           <Badge variant="secondary" className="text-xs">Projetos</Badge>
+                        )}
+                        {plan.has_lead_gleego && (
+                          <Badge variant="secondary" className="text-xs">Lead Gleego</Badge>
                         )}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
@@ -2060,6 +2078,14 @@ export default function Admin() {
                     id="edit-projects"
                     checked={editingPlan?.has_projects || false}
                     onCheckedChange={(v) => setEditingPlan({ ...editingPlan!, has_projects: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <Label htmlFor="edit-lead-gleego">Lead Gleego</Label>
+                  <Switch
+                    id="edit-lead-gleego"
+                    checked={editingPlan?.has_lead_gleego || false}
+                    onCheckedChange={(v) => setEditingPlan({ ...editingPlan!, has_lead_gleego: v })}
                   />
                 </div>
                 <div className="flex items-center justify-between rounded-lg border p-3">
