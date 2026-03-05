@@ -36,6 +36,7 @@ import {
   Webhook,
   Ghost,
   FolderKanban,
+  BarChart4,
 } from "lucide-react";
 import { API_URL, getAuthToken } from "@/lib/api";
 import gleegoLogo from "@/assets/gleego-logo.png";
@@ -110,6 +111,7 @@ const getNavSections = (hasConnections: boolean): NavSection[] => [
       { name: "Fluxos Externos", href: "/fluxos-externos", icon: FileText, adminOnly: true },
       { name: "Webhooks", href: "/lead-webhooks", icon: Webhook, adminOnly: true },
       { name: "CTWA Analytics", href: "/ctwa-analytics", icon: MousePointerClick, adminOnly: true },
+      { name: "Lead Gleego", href: "/lead-gleego", icon: BarChart4 },
     ],
   },
   {
