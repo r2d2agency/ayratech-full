@@ -40,6 +40,7 @@ import ghostRoutes from './routes/ghost.js';
 import projectsRoutes from './routes/projects.js';
 import pushRoutes from './routes/push.js';
 import taskBoardsRoutes from './routes/task-boards.js';
+import leadGleegoRoutes from './routes/lead-gleego.js';
 import { initDatabase } from './init-db.js';
 import { executeNotifications } from './scheduler.js';
 import { executeCampaignMessages } from './campaign-scheduler.js';
@@ -198,6 +199,7 @@ app.use('/api/ghost', ghostRoutes);
 app.use('/api/projects', projectsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/task-boards', taskBoardsRoutes);
+app.use('/api/lead-gleego', leadGleegoRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
