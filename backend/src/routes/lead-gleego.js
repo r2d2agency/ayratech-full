@@ -118,7 +118,7 @@ router.get('/sso', async (req, res) => {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 15000);
-      response = await fetch('https://api.gleego.com.br/api/auth/token-login', {
+      response = await fetch('https://backlead.gleego.com.br/api/auth/token-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, apiKey }),
