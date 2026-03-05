@@ -29,7 +29,7 @@ export function ConnectionStatusIndicator() {
 
   // Don't render if no connections
   if (totalCount === 0) {
-    return null;
+    return <span className="hidden" />;
   }
 
   const getStatusColor = () => {
