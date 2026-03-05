@@ -113,17 +113,24 @@ router.get('/sso', async (req, res) => {
 
     log(`Lead Gleego SSO: calling external API for ${email}`);
 
-    // Solicitar token ao Lead Extractor (server-side)
+    // Solicitar token ao Lead Extractor (server-side) with timeout
     let response;
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
       response = await fetch('https://api.gleego.com.br/api/auth/token-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, apiKey }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
     } catch (fetchErr) {
       logError('Lead Gleego SSO fetch error (network)', fetchErr);
-      return res.status(502).json({ error: 'Não foi possível conectar ao servidor Lead Gleego. Verifique sua conexão.' });
+      const msg = fetchErr.name === 'AbortError'
+        ? 'Timeout ao conectar ao servidor Lead Gleego (15s)'
+        : 'Não foi possível conectar ao servidor Lead Gleego. Verifique sua conexão.';
+      return res.status(502).json({ error: msg });
     }
 
     let data;
