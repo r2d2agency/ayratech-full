@@ -94,6 +94,8 @@ DO $$ BEGIN
     ALTER TABLE plans ADD COLUMN IF NOT EXISTS has_group_secretary BOOLEAN DEFAULT false;
     ALTER TABLE plans ADD COLUMN IF NOT EXISTS has_ghost BOOLEAN DEFAULT false;
     ALTER TABLE plans ADD COLUMN IF NOT EXISTS has_projects BOOLEAN DEFAULT false;
+    ALTER TABLE plans ADD COLUMN IF NOT EXISTS has_lead_gleego BOOLEAN DEFAULT false;
+    ALTER TABLE organizations ADD COLUMN IF NOT EXISTS integration_settings jsonb DEFAULT '{}';
     ALTER TABLE users ADD COLUMN IF NOT EXISTS whatsapp_phone VARCHAR(50);
 EXCEPTION
     WHEN duplicate_column THEN null;
