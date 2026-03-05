@@ -58,29 +58,40 @@ export function usePushNotifications() {
       setStatus(prev => ({ ...prev, loading: true }));
 
       // Request permission
+      console.log('[PUSH] Requesting notification permission...');
       const permission = await Notification.requestPermission();
+      console.log('[PUSH] Permission result:', permission);
       if (permission !== 'granted') {
         setStatus(prev => ({ ...prev, permission, loading: false }));
         return false;
       }
 
       // Get VAPID key from server
-      const { publicKey } = await api<{ publicKey: string }>('/api/push/vapid-key');
+      console.log('[PUSH] Fetching VAPID key...');
+      const vapidResponse = await api<{ publicKey: string }>('/api/push/vapid-key');
+      console.log('[PUSH] VAPID response:', vapidResponse);
+      const publicKey = vapidResponse?.publicKey;
       if (!publicKey) {
-        console.error('No VAPID public key configured');
+        console.error('[PUSH] No VAPID public key configured on server');
         setStatus(prev => ({ ...prev, loading: false }));
         return false;
       }
 
       // Convert VAPID key
+      console.log('[PUSH] VAPID key length:', publicKey.length);
       const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      console.log('[PUSH] Decoded key length:', applicationServerKey.length, 'bytes');
 
-      // Subscribe
+      // Wait for service worker
+      console.log('[PUSH] Waiting for service worker...');
       const registration = await navigator.serviceWorker.ready;
+      console.log('[PUSH] Service worker ready, subscribing...');
+      
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey,
       });
+      console.log('[PUSH] Browser subscription created');
 
       // Send to server
       const subJson = subscription.toJSON();
@@ -95,11 +106,12 @@ export function usePushNotifications() {
         },
         auth: true,
       });
+      console.log('[PUSH] Subscription saved on server');
 
       setStatus({ isSupported: true, isSubscribed: true, permission: 'granted', loading: false });
       return true;
-    } catch (err) {
-      console.error('Push subscribe error:', err);
+    } catch (err: any) {
+      console.error('[PUSH] Subscribe error:', err?.message || err, err);
       setStatus(prev => ({ ...prev, loading: false }));
       return false;
     }
