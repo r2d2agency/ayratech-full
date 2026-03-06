@@ -1082,7 +1082,7 @@ export function ChatArea({
       <TransferDialog open={showTransferDialog} onOpenChange={setShowTransferDialog} conversation={conversation} team={team} onTransfer={onTransfer} />
       <DepartmentDialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog} conversation={conversation} departments={departments} onSave={handleSaveDepartment} saving={savingDepartment} />
       {onDeleteConversation && <DeleteConversationDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} onDelete={onDeleteConversation} />}
-      {onSyncHistory && <SyncDialog open={showSyncDialog} onOpenChange={setShowSyncDialog} onSync={onSyncHistory} syncing={syncingHistory} />}
+      
       <CreateTagDialog open={showTagDialog} onOpenChange={setShowTagDialog} onCreateTag={onCreateTag} />
       <EditContactDialog open={showEditContactDialog} onOpenChange={setShowEditContactDialog} conversation={conversation} />
       </div>
