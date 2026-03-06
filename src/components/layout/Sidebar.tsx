@@ -119,6 +119,7 @@ const getNavSections = (hasConnections: boolean): NavSection[] => [
     title: "Minha Conta",
     icon: User,
     items: [
+      { name: "Conexões", href: "/conexao", icon: Plug, pageKey: 'conexoes' },
       { name: "Ajustes", href: "/configuracoes", icon: Settings, pageKey: 'ajustes' },
     ],
   },
@@ -128,7 +129,6 @@ const getNavSections = (hasConnections: boolean): NavSection[] => [
     adminOnly: true,
     items: [
       { name: "Cobrança", href: "/cobranca", icon: Receipt, pageKey: 'cobranca', moduleKey: 'billing' },
-      { name: "Conexões", href: "/conexao", icon: Plug, pageKey: 'conexoes' },
       { name: "Organizações", href: "/organizacoes", icon: Building2, pageKey: 'organizacoes' },
     ],
   },
