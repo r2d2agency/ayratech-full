@@ -20,6 +20,7 @@ import { FeaturesDocumentation } from "@/components/admin/FeaturesDocumentation"
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { WorkSchedulePanel } from "@/components/settings/WorkSchedulePanel";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
+import { NotificationConnectionSettings } from "@/components/settings/NotificationConnectionSettings";
 
 const Configuracoes = () => {
   const { user } = useAuth();
@@ -401,6 +402,9 @@ const Configuracoes = () => {
 
               {/* Web Push Notifications */}
               <PushNotificationSettings />
+
+              {/* Per-device and per-connection notification settings */}
+              <NotificationConnectionSettings />
 
               {/* PWA Install */}
               <Card className="animate-fade-in shadow-card">

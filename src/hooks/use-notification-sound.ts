@@ -32,21 +32,32 @@ export type NewConversationSoundId = typeof NEW_CONVERSATION_SOUNDS[number]['id'
 
 interface NotificationSoundSettings {
   soundEnabled: boolean;
+  soundEnabledMobile: boolean;
+  soundEnabledDesktop: boolean;
   soundId: NotificationSoundId;
   newConversationSoundId: NewConversationSoundId;
   pushEnabled: boolean;
   volume: number;
+  mutedConnections: string[]; // connection IDs that are muted
 }
 
 const SETTINGS_KEY = 'notification-sound-settings';
 
 const defaultSettings: NotificationSoundSettings = {
   soundEnabled: true,
+  soundEnabledMobile: true,
+  soundEnabledDesktop: true,
   soundId: 'default',
-  newConversationSoundId: 'chime', // Som diferenciado para novas conversas
+  newConversationSoundId: 'chime',
   pushEnabled: false,
   volume: 0.7,
+  mutedConnections: [],
 };
+
+// Detect if current device is mobile
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+}
 
 // Audio cache to avoid re-loading
 const audioCache: Record<string, HTMLAudioElement> = {};
@@ -113,8 +124,21 @@ export function useNotificationSound() {
     }
   }, [updateSettings]);
 
+  const isSoundAllowedForDevice = useCallback(() => {
+    if (!settings.soundEnabled) return false;
+    const mobile = isMobileDevice();
+    if (mobile && !settings.soundEnabledMobile) return false;
+    if (!mobile && !settings.soundEnabledDesktop) return false;
+    return true;
+  }, [settings.soundEnabled, settings.soundEnabledMobile, settings.soundEnabledDesktop]);
+
+  const isConnectionMuted = useCallback((connectionId?: string) => {
+    if (!connectionId) return false;
+    return settings.mutedConnections.includes(connectionId);
+  }, [settings.mutedConnections]);
+
   const playSound = useCallback((customSoundId?: NotificationSoundId) => {
-    if (!settings.soundEnabled) return;
+    if (!isSoundAllowedForDevice()) return;
     
     const soundId = customSoundId || settings.soundId;
     const audio = getAudio(soundId);
@@ -126,11 +150,11 @@ export function useNotificationSound() {
         console.warn('Could not play notification sound:', err);
       });
     }
-  }, [settings.soundEnabled, settings.soundId, settings.volume]);
+  }, [isSoundAllowedForDevice, settings.soundId, settings.volume]);
 
   // Play special sound for new conversations entering the waiting queue (plays twice for emphasis)
   const playNewConversationSound = useCallback(() => {
-    if (!settings.soundEnabled) return;
+    if (!isSoundAllowedForDevice()) return;
     
     const soundId = settings.newConversationSoundId || 'chime';
     if (soundId === 'none') return;
@@ -138,13 +162,10 @@ export function useNotificationSound() {
     const sound = NEW_CONVERSATION_SOUNDS.find(s => s.id === soundId);
     if (!sound?.file) return;
     
-    // Create fresh audio instance to allow playing twice
     const audio = new Audio(sound.file);
     audio.volume = settings.volume;
     
-    // Play first time
     audio.play().then(() => {
-      // Play second time after short delay for emphasis
       setTimeout(() => {
         const audio2 = new Audio(sound.file!);
         audio2.volume = settings.volume;
@@ -153,7 +174,7 @@ export function useNotificationSound() {
     }).catch(err => {
       console.warn('Could not play new conversation sound:', err);
     });
-  }, [settings.soundEnabled, settings.newConversationSoundId, settings.volume]);
+  }, [isSoundAllowedForDevice, settings.newConversationSoundId, settings.volume]);
 
   const previewSound = useCallback((soundId: NotificationSoundId) => {
     const audio = getAudio(soundId);
@@ -210,6 +231,8 @@ export function useNotificationSound() {
     previewSound,
     showPushNotification,
     notify,
+    isConnectionMuted,
+    isMobileDevice: isMobileDevice(),
     isPushSupported: typeof window !== 'undefined' && 'Notification' in window,
   };
 }

@@ -25,6 +25,7 @@ interface UnreadConversation {
   last_message_type: string | null;
   last_message_at: string | null;
   connection_name: string;
+  connection_id?: string;
   attendance_status?: string | null;
   created_at?: string | null;
 }
@@ -41,7 +42,7 @@ export function MessageNotifications() {
   const previousUnreadRef = useRef<number>(0);
   const previousConversationIdsRef = useRef<Set<string>>(new Set());
   
-  const { playSound, playNewConversationSound, settings } = useNotificationSound();
+  const { playSound, playNewConversationSound, settings, isConnectionMuted } = useNotificationSound();
 
   // Project note notifications
   const { data: projectNotifications = [] } = useProjectNoteNotifications();
@@ -67,17 +68,26 @@ export function MessageNotifications() {
       const newConversationIds = [...currentIds].filter(id => !previousConversationIdsRef.current.has(id));
       const hasNewConversations = newConversationIds.length > 0 && previousConversationIdsRef.current.size > 0;
       
+      // Check if new conversations are from non-muted connections
+      const hasUnmutedNewConversations = hasNewConversations && newConversationIds.some(id => {
+        const conv = data.find(c => c.id === id);
+        return conv && !isConnectionMuted(conv.connection_id);
+      });
+      
       // Check for new messages in existing conversations
       const hasNewMessagesInExisting = newTotal > previousUnreadRef.current && !hasNewConversations;
       
+      // Check if new messages are from non-muted connections
+      const hasUnmutedNewMessages = hasNewMessagesInExisting && data.some(conv => {
+        return conv.unread_count > 0 && !isConnectionMuted(conv.connection_id);
+      });
+      
       // Play appropriate sound
       if (soundEnabled && settings.soundEnabled && previousUnreadRef.current >= 0) {
-        if (hasNewConversations) {
-          // New conversation entering the queue - play special double sound
+        if (hasUnmutedNewConversations) {
           console.log('[Notifications] New conversation detected:', newConversationIds);
           playNewConversationSound();
-        } else if (hasNewMessagesInExisting && previousUnreadRef.current > 0) {
-          // New message in existing conversation - play regular sound
+        } else if (hasUnmutedNewMessages && previousUnreadRef.current > 0) {
           playSound();
         }
       }
@@ -93,7 +103,7 @@ export function MessageNotifications() {
     } catch (error) {
       console.error("Error fetching unread conversations:", error);
     }
-  }, [soundEnabled, settings.soundEnabled, playSound, playNewConversationSound]);
+  }, [soundEnabled, settings.soundEnabled, playSound, playNewConversationSound, isConnectionMuted]);
 
   // Poll for unread messages - faster polling (every 3 seconds)
   useEffect(() => {
