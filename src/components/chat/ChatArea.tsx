@@ -82,6 +82,7 @@ import { useCRMDealsByPhone, CRMDeal } from "@/hooks/use-crm";
 import { DealDetailDialog } from "@/components/crm/DealDetailDialog";
 import { AIAgentBanner } from "./AIAgentBanner";
 import { ChatMessageBubble } from "./ChatMessageBubble";
+import { ForwardMessageDialog } from "./ForwardMessageDialog";
 import {
   TransferDialog,
   DepartmentDialog,
@@ -96,6 +97,7 @@ import { ptBR } from "date-fns/locale";
 interface ChatAreaProps {
   conversation: Conversation | null;
   messages: ChatMessage[];
+  conversations?: Conversation[];
   loading: boolean;
   sending: boolean;
   syncingHistory?: boolean;
@@ -105,6 +107,7 @@ interface ChatAreaProps {
   userRole?: string;
   onSyncHistory?: (days: number) => Promise<void>;
   onSendMessage: (content: string, type?: string, mediaUrl?: string, quotedMessageId?: string, mediaMimetype?: string) => Promise<void>;
+  onForwardMessage?: (targetConversationId: string, message: ChatMessage) => Promise<void>;
   onLoadMore: () => void;
   hasMore: boolean;
   onAddTag: (tagId: string) => void;
@@ -126,6 +129,7 @@ interface ChatAreaProps {
 export function ChatArea({
   conversation,
   messages,
+  conversations = [],
   loading,
   sending,
   syncingHistory,
@@ -135,6 +139,7 @@ export function ChatArea({
   userRole,
   onSyncHistory,
   onSendMessage,
+  onForwardMessage,
   onLoadMore,
   hasMore,
   onAddTag,
@@ -192,6 +197,7 @@ export function ChatArea({
   const [savingCall, setSavingCall] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [aiAgentActive, setAiAgentActive] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -892,6 +898,7 @@ export function ChatArea({
               isCurrentResult={searchResults[currentSearchIndex] === msg.id}
               searchQuery={searchQuery}
               onReply={setReplyingTo}
+              onForward={onForwardMessage ? (msg) => setForwardingMessage(msg) : undefined}
               onSendMessage={onSendMessage}
               onEditMessage={async (messageId, content) => {
                 const ok = await editMessage(conversation.id, messageId, content);
@@ -1123,6 +1130,16 @@ export function ChatArea({
         />
       )}
       <DealDetailDialog deal={selectedDeal} open={showDealDetailDialog} onOpenChange={open => { setShowDealDetailDialog(open); if (!open) setSelectedDeal(null); }} />
+      {onForwardMessage && conversation && (
+        <ForwardMessageDialog
+          open={!!forwardingMessage}
+          onOpenChange={(open) => { if (!open) setForwardingMessage(null); }}
+          message={forwardingMessage}
+          conversations={conversations}
+          currentConversationId={conversation.id}
+          onForward={onForwardMessage}
+        />
+      )}
     </div>
   );
 }

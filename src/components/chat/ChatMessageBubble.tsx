@@ -14,6 +14,7 @@ import {
   Trash2,
   X,
   Send,
+  Forward,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -32,6 +33,7 @@ interface ChatMessageBubbleProps {
   isCurrentResult: boolean;
   searchQuery: string;
   onReply: (msg: ChatMessage) => void;
+  onForward?: (msg: ChatMessage) => void;
   onSendMessage: (content: string, type?: string, mediaUrl?: string, quotedMessageId?: string, mediaMimetype?: string) => Promise<void>;
   onEditMessage?: (messageId: string, content: string) => Promise<boolean>;
   onDeleteMessage?: (messageId: string) => Promise<boolean>;
@@ -66,6 +68,7 @@ export function ChatMessageBubble({
   isCurrentResult,
   searchQuery,
   onReply,
+  onForward,
   onSendMessage,
   onEditMessage,
   onDeleteMessage,
@@ -113,17 +116,30 @@ export function ChatMessageBubble({
         msg.from_me ? "justify-end" : "justify-start"
       )}
     >
-      {/* Reply button - left side for received messages */}
+      {/* Action buttons - left side for received messages */}
       {!msg.from_me && msg.message_type !== 'system' && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity self-center mr-1"
-          onClick={() => onReply(msg)}
-          title="Responder"
-        >
-          <Reply className="h-3 w-3" />
-        </Button>
+        <div className="flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity self-center mr-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => onReply(msg)}
+            title="Responder"
+          >
+            <Reply className="h-3 w-3" />
+          </Button>
+          {onForward && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => onForward(msg)}
+              title="Encaminhar"
+            >
+              <Forward className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       )}
 
       <div
@@ -352,6 +368,17 @@ export function ChatMessageBubble({
           >
             <Reply className="h-3 w-3" />
           </Button>
+          {onForward && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => onForward(msg)}
+              title="Encaminhar"
+            >
+              <Forward className="h-3 w-3" />
+            </Button>
+          )}
           {canEdit && (
             <Button
               variant="ghost"
