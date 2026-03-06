@@ -106,6 +106,24 @@ interface ConversationListProps {
   onGlobalSearchSelect?: (conversationId: string, messageId?: string) => void;
 }
 
+// Predefined color palette for connection indicators
+const CONNECTION_COLORS = [
+  'hsl(142, 71%, 45%)',  // green
+  'hsl(217, 91%, 60%)',  // blue
+  'hsl(47, 100%, 50%)',  // amber
+  'hsl(280, 68%, 60%)',  // purple
+  'hsl(0, 84%, 60%)',    // red
+  'hsl(187, 85%, 43%)',  // cyan
+  'hsl(25, 95%, 53%)',   // orange
+  'hsl(330, 81%, 60%)',  // pink
+];
+
+function getConnectionColor(connectionId: string | undefined, connections: Connection[] | undefined): string | null {
+  if (!connections || connections.length <= 1 || !connectionId) return null;
+  const idx = connections.findIndex(c => c.id === connectionId);
+  return CONNECTION_COLORS[idx >= 0 ? idx % CONNECTION_COLORS.length : 0];
+}
+
 const getMessageTypeIcon = (type: string | null) => {
   switch (type) {
     case 'image':
@@ -650,13 +668,15 @@ export function ConversationList({
               const isWaiting = conv.attendance_status === 'waiting';
               const isAttending = conv.attendance_status === 'attending';
               const isFinished = conv.attendance_status === 'finished';
+              const connColor = getConnectionColor(conv.connection_id, connections);
               
               const conversationContent = (
                 <div
                   className={cn(
-                    "flex items-start gap-3 p-4 cursor-pointer transition-colors hover:bg-accent/50 group",
+                    "flex items-start gap-3 p-4 cursor-pointer transition-colors hover:bg-accent/50 group relative",
                     selectedId === conv.id && "bg-accent"
                   )}
+                  style={connColor ? { borderLeft: `3px solid ${connColor}` } : undefined}
                 >
                   {/* Avatar with profile picture */}
                   <Avatar 
@@ -751,7 +771,15 @@ export function ConversationList({
                     <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                       {/* Connection name - prominent when multiple connections */}
                       {conv.connection_name && connections && connections.length > 1 && (
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 border-primary/30 text-primary">
+                        <Badge 
+                          variant="outline" 
+                          className="text-[10px] px-1.5 py-0 gap-0.5"
+                          style={connColor ? { 
+                            borderColor: connColor, 
+                            color: connColor,
+                            backgroundColor: `${connColor}15`
+                          } : undefined}
+                        >
                           <Smartphone className="h-2.5 w-2.5" />
                           {conv.connection_name}
                         </Badge>
