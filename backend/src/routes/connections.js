@@ -245,21 +245,17 @@ router.post('/', async (req, res) => {
     // Migrate orphaned conversations from deleted connections in the same org
     if (org?.organization_id) {
       try {
+        // Find conversations whose connection_id no longer exists in the connections table
+        // but belonged to a connection from the same organization
         const migrateResult = await query(`
           UPDATE conversations 
           SET connection_id = $1 
-          WHERE connection_id IN (
-            SELECT c2.connection_id 
-            FROM conversations c2 
-            WHERE c2.connection_id NOT IN (SELECT id FROM connections)
-              AND c2.connection_id IN (
-                SELECT id FROM (
-                  SELECT DISTINCT connection_id as id FROM conversations 
-                  WHERE connection_id NOT IN (SELECT id FROM connections)
-                ) orphaned
-              )
-          )
-          AND connection_id NOT IN (SELECT id FROM connections)
+          WHERE connection_id NOT IN (SELECT id FROM connections)
+            AND connection_id IN (
+              SELECT DISTINCT conv.connection_id 
+              FROM conversations conv
+              WHERE conv.connection_id NOT IN (SELECT id FROM connections)
+            )
           RETURNING id
         `, [connection.id]);
         
@@ -268,7 +264,6 @@ router.post('/', async (req, res) => {
         }
       } catch (migrateError) {
         console.error('[Connections] Failed to migrate orphaned conversations:', migrateError);
-        // Non-fatal - continue
       }
     }
 
