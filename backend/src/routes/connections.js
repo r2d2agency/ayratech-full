@@ -242,6 +242,36 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Migrate orphaned conversations from deleted connections in the same org
+    if (org?.organization_id) {
+      try {
+        const migrateResult = await query(`
+          UPDATE conversations 
+          SET connection_id = $1 
+          WHERE connection_id IN (
+            SELECT c2.connection_id 
+            FROM conversations c2 
+            WHERE c2.connection_id NOT IN (SELECT id FROM connections)
+              AND c2.connection_id IN (
+                SELECT id FROM (
+                  SELECT DISTINCT connection_id as id FROM conversations 
+                  WHERE connection_id NOT IN (SELECT id FROM connections)
+                ) orphaned
+              )
+          )
+          AND connection_id NOT IN (SELECT id FROM connections)
+          RETURNING id
+        `, [connection.id]);
+        
+        if (migrateResult.rowCount > 0) {
+          console.log(`[Connections] Migrated ${migrateResult.rowCount} orphaned conversations to new connection ${connection.id}`);
+        }
+      } catch (migrateError) {
+        console.error('[Connections] Failed to migrate orphaned conversations:', migrateError);
+        // Non-fatal - continue
+      }
+    }
+
     res.status(201).json(connection);
   } catch (error) {
     console.error('Create connection error:', error);
