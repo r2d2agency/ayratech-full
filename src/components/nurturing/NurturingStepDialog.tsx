@@ -379,7 +379,7 @@ export function NurturingStepDialog({
               <div className="space-y-2">
                 <Label>Assunto do Email</Label>
                 <Input
-                  placeholder="Olá {{nome}}, tenho uma proposta especial..."
+                  placeholder="Olá {nome}, tenho uma proposta especial..."
                   value={emailSubject}
                   onChange={(e) => setEmailSubject(e.target.value)}
                 />
