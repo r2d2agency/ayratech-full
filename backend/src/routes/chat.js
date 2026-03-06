@@ -357,6 +357,9 @@ router.get('/conversations/unread', authenticate, async (req, res) => {
         conv.contact_phone,
         conv.unread_count,
         conv.last_message_at,
+        conv.attendance_status,
+        conv.is_group,
+        conv.created_at,
         conn.name as connection_name,
         (SELECT content FROM chat_messages WHERE conversation_id = conv.id ORDER BY timestamp DESC LIMIT 1) as last_message,
         (SELECT message_type FROM chat_messages WHERE conversation_id = conv.id ORDER BY timestamp DESC LIMIT 1) as last_message_type
@@ -436,9 +439,10 @@ router.get('/conversations', authenticate, async (req, res) => {
       const params = [connectionIds];
       let paramIndex = 2;
 
-      // IMPORTANT: Only show conversations with messages (unless explicitly requested)
+      // Show conversations with messages OR with unread count (to handle cases where
+      // message insertion might have failed but unread_count was incremented)
       if (includeEmpty !== 'true') {
-        sql += ` AND EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.conversation_id = conv.id)`;
+        sql += ` AND (EXISTS (SELECT 1 FROM chat_messages cm WHERE cm.conversation_id = conv.id) OR conv.unread_count > 0)`;
       }
 
       // Filter by group status
