@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check } from "lucide-react";
+import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check, History } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
@@ -247,6 +247,22 @@ const handleGetQRCode = async (connection: Connection) => {
       toast.success('Conexão excluída');
     } catch (error) {
       toast.error('Erro ao excluir conexão');
+    }
+  };
+
+  const handleMigrateConversations = async (connection: Connection) => {
+    try {
+      const result = await api<{ migrated: number }>(`/api/connections/${connection.id}/migrate-conversations`, {
+        method: 'POST',
+        auth: true,
+      });
+      if (result.migrated > 0) {
+        toast.success(`${result.migrated} conversas recuperadas com sucesso!`);
+      } else {
+        toast.info('Nenhuma conversa órfã encontrada para recuperar.');
+      }
+    } catch {
+      toast.error('Erro ao recuperar conversas');
     }
   };
 
@@ -1072,6 +1088,16 @@ const handleGetQRCode = async (connection: Connection) => {
                       <Pencil className="h-4 w-4" />
                     </Button>
                     
+                    {/* Recover orphaned conversations */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMigrateConversations(connection)}
+                      title="Recuperar conversas de conexão anterior"
+                    >
+                      <History className="h-4 w-4 text-primary" />
+                    </Button>
+
                     {/* Delete button - always visible */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
