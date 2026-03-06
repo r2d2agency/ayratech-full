@@ -124,8 +124,21 @@ export function useNotificationSound() {
     }
   }, [updateSettings]);
 
+  const isSoundAllowedForDevice = useCallback(() => {
+    if (!settings.soundEnabled) return false;
+    const mobile = isMobileDevice();
+    if (mobile && !settings.soundEnabledMobile) return false;
+    if (!mobile && !settings.soundEnabledDesktop) return false;
+    return true;
+  }, [settings.soundEnabled, settings.soundEnabledMobile, settings.soundEnabledDesktop]);
+
+  const isConnectionMuted = useCallback((connectionId?: string) => {
+    if (!connectionId) return false;
+    return settings.mutedConnections.includes(connectionId);
+  }, [settings.mutedConnections]);
+
   const playSound = useCallback((customSoundId?: NotificationSoundId) => {
-    if (!settings.soundEnabled) return;
+    if (!isSoundAllowedForDevice()) return;
     
     const soundId = customSoundId || settings.soundId;
     const audio = getAudio(soundId);
@@ -137,7 +150,7 @@ export function useNotificationSound() {
         console.warn('Could not play notification sound:', err);
       });
     }
-  }, [settings.soundEnabled, settings.soundId, settings.volume]);
+  }, [isSoundAllowedForDevice, settings.soundId, settings.volume]);
 
   // Play special sound for new conversations entering the waiting queue (plays twice for emphasis)
   const playNewConversationSound = useCallback(() => {
