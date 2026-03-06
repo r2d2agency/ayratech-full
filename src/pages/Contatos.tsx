@@ -468,7 +468,7 @@ const Contatos = () => {
         {syncConnections.length > 1 && (
           <div className="flex items-center gap-3 animate-fade-in">
             <Label className="text-sm text-muted-foreground whitespace-nowrap">Filtrar por conta:</Label>
-            <Select value={filterConnectionId} onValueChange={setFilterConnectionId}>
+            <Select value={filterConnectionId || "all"} onValueChange={(v) => setFilterConnectionId(v === "all" ? "" : v)}>
               <SelectTrigger className="w-[280px]">
                 <SelectValue placeholder="Todas as contas" />
               </SelectTrigger>
