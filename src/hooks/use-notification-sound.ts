@@ -231,6 +231,8 @@ export function useNotificationSound() {
     previewSound,
     showPushNotification,
     notify,
+    isConnectionMuted,
+    isMobileDevice: isMobileDevice(),
     isPushSupported: typeof window !== 'undefined' && 'Notification' in window,
   };
 }
