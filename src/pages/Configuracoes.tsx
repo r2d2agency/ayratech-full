@@ -20,6 +20,7 @@ import { FeaturesDocumentation } from "@/components/admin/FeaturesDocumentation"
 import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { WorkSchedulePanel } from "@/components/settings/WorkSchedulePanel";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
+import { NotificationConnectionSettings } from "@/components/settings/NotificationConnectionSettings";
 
 const Configuracoes = () => {
   const { user } = useAuth();
