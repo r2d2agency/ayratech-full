@@ -464,6 +464,26 @@ const Contatos = () => {
           </Dialog>
         </div>
 
+        {/* Connection Filter */}
+        {syncConnections.length > 1 && (
+          <div className="flex items-center gap-3 animate-fade-in">
+            <Label className="text-sm text-muted-foreground whitespace-nowrap">Filtrar por conta:</Label>
+            <Select value={filterConnectionId} onValueChange={setFilterConnectionId}>
+              <SelectTrigger className="w-[280px]">
+                <SelectValue placeholder="Todas as contas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {syncConnections.map((conn) => (
+                  <SelectItem key={conn.id} value={conn.id}>
+                    {conn.name}{conn.phone_number ? ` (${conn.phone_number})` : ''}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <Card className="animate-fade-in">
           <CardHeader>
             <CardTitle>Sincronizar agenda da conexão</CardTitle>
