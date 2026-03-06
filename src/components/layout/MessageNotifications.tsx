@@ -25,6 +25,7 @@ interface UnreadConversation {
   last_message_type: string | null;
   last_message_at: string | null;
   connection_name: string;
+  connection_id?: string;
   attendance_status?: string | null;
   created_at?: string | null;
 }
