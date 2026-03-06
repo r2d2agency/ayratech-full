@@ -250,6 +250,22 @@ const handleGetQRCode = async (connection: Connection) => {
     }
   };
 
+  const handleMigrateConversations = async (connection: Connection) => {
+    try {
+      const result = await api<{ migrated: number }>(`/api/connections/${connection.id}/migrate-conversations`, {
+        method: 'POST',
+        auth: true,
+      });
+      if (result.migrated > 0) {
+        toast.success(`${result.migrated} conversas recuperadas com sucesso!`);
+      } else {
+        toast.info('Nenhuma conversa órfã encontrada para recuperar.');
+      }
+    } catch {
+      toast.error('Erro ao recuperar conversas');
+    }
+  };
+
   const handleWebhookDiagnostic = async (connection: Connection) => {
     setDiagLoading(connection.id);
     try {
