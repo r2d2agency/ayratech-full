@@ -451,14 +451,14 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Menu Button - positioned safely */}
-      <div className="fixed top-3 left-3 z-[70] lg:hidden">
+      {/* Mobile Menu Button - positioned safely above everything */}
+      <div className="fixed top-3 left-3 z-[80] lg:hidden" style={{ isolation: 'isolate' }}>
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
           <SheetTrigger asChild>
             <Button 
               variant="outline" 
               size="icon" 
-              className="h-10 w-10 bg-card/95 backdrop-blur-sm border-border shadow-lg rounded-full"
+              className="h-10 w-10 bg-card border-border shadow-xl rounded-full ring-2 ring-background"
             >
               <Menu className="h-5 w-5" />
             </Button>
