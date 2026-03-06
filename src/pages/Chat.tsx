@@ -304,6 +304,11 @@ const Chat = () => {
     loadConversationsRef.current = loadConversations;
   }, [loadConversations]);
 
+  // Persist selected connection filter
+  useEffect(() => {
+    localStorage.setItem('chat_selected_connection', filters.connection);
+  }, [filters.connection]);
+
   // Reload immediately when filters or activeTab change
   // Note: loadConversations deps are now stable so this only triggers on actual filter changes
   useEffect(() => {
