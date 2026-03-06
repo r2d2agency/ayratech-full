@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
 import { chatEvents } from "@/lib/chat-events";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Users, Bell, RefreshCw } from "lucide-react";
+import { MessageSquare, Users, Bell, RefreshCw, ChevronLeft } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -896,6 +896,19 @@ const Chat = () => {
                   />
                 </ResizablePanel>
               </>
+            )}
+            {selectedConversation && !crmPanelOpen && (
+              <div className="relative shrink-0 w-6">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setCrmPanelOpen(true)}
+                  className="absolute top-1/2 -translate-y-1/2 z-20 h-12 w-6 rounded-l-md rounded-r-none border-r-0 bg-background shadow-md hover:bg-muted -left-0"
+                  title="Abrir painel CRM"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
             )}
           </ResizablePanelGroup>
         )}
