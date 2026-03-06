@@ -154,7 +154,7 @@ export function useNotificationSound() {
 
   // Play special sound for new conversations entering the waiting queue (plays twice for emphasis)
   const playNewConversationSound = useCallback(() => {
-    if (!settings.soundEnabled) return;
+    if (!isSoundAllowedForDevice()) return;
     
     const soundId = settings.newConversationSoundId || 'chime';
     if (soundId === 'none') return;
@@ -162,13 +162,10 @@ export function useNotificationSound() {
     const sound = NEW_CONVERSATION_SOUNDS.find(s => s.id === soundId);
     if (!sound?.file) return;
     
-    // Create fresh audio instance to allow playing twice
     const audio = new Audio(sound.file);
     audio.volume = settings.volume;
     
-    // Play first time
     audio.play().then(() => {
-      // Play second time after short delay for emphasis
       setTimeout(() => {
         const audio2 = new Audio(sound.file!);
         audio2.volume = settings.volume;
@@ -177,7 +174,7 @@ export function useNotificationSound() {
     }).catch(err => {
       console.warn('Could not play new conversation sound:', err);
     });
-  }, [settings.soundEnabled, settings.newConversationSoundId, settings.volume]);
+  }, [isSoundAllowedForDevice, settings.newConversationSoundId, settings.volume]);
 
   const previewSound = useCallback((soundId: NotificationSoundId) => {
     const audio = getAudio(soundId);
