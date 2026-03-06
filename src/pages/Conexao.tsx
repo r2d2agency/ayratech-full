@@ -1088,6 +1088,16 @@ const handleGetQRCode = async (connection: Connection) => {
                       <Pencil className="h-4 w-4" />
                     </Button>
                     
+                    {/* Recover orphaned conversations */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleMigrateConversations(connection)}
+                      title="Recuperar conversas de conexão anterior"
+                    >
+                      <History className="h-4 w-4 text-primary" />
+                    </Button>
+
                     {/* Delete button - always visible */}
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
