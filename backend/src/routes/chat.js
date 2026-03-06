@@ -1913,6 +1913,7 @@ router.get('/team', authenticate, async (req, res) => {
          FROM organization_members om
          JOIN users u ON u.id = om.user_id
          WHERE om.organization_id = $1
+           AND COALESCE(om.is_active, true) = true
          ORDER BY u.name`,
         [organizationId]
       );
