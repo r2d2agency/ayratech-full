@@ -482,15 +482,14 @@ router.get('/conversations', authenticate, async (req, res) => {
         paramIndex++;
       }
 
-      // Filter by attendance status
-      // Conversations with unread messages are shown in ALL tabs to prevent them from being hidden
+      // Filter by attendance status - strict filtering per tab
       if (supportsAttendance) {
         if (attendance_status === 'waiting') {
-          sql += ` AND (conv.attendance_status = 'waiting' OR conv.unread_count > 0)`;
+          sql += ` AND conv.attendance_status = 'waiting'`;
         } else if (attendance_status === 'attending') {
-          sql += ` AND (conv.attendance_status = 'attending' OR conv.attendance_status IS NULL OR conv.unread_count > 0)`;
+          sql += ` AND (conv.attendance_status = 'attending' OR conv.attendance_status IS NULL)`;
         } else if (attendance_status === 'finished') {
-          sql += ` AND (conv.attendance_status = 'finished' OR conv.unread_count > 0)`;
+          sql += ` AND conv.attendance_status = 'finished'`;
         }
       }
 
