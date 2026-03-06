@@ -686,7 +686,7 @@ export function ChatArea({
             </div>
           )}
 
-          {!isMobile && onOpenCRM && modulesEnabled.crm && (
+          {!isMobile && onOpenCRM && (
             <>
               {!conversation.is_group && openDeals.length > 0 ? (
                 <DropdownMenu>
