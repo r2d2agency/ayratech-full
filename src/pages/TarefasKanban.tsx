@@ -438,7 +438,7 @@ export default function TarefasKanban() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="">Para mim</SelectItem>
-                      {orgMembers.map(m => (
+                      {orgMembers.filter(m => m.is_active !== false).map(m => (
                         <SelectItem key={m.user_id} value={m.user_id}>
                           {m.name}
                         </SelectItem>
