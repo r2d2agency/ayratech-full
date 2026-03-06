@@ -795,7 +795,7 @@ const Chat = () => {
                 onOpenCRM={() => setCrmPanelOpen(true)}
               />
             )}
-            {selectedConversation && modulesEnabled.crm && (
+            {selectedConversation && (
               <Sheet open={crmPanelOpen} onOpenChange={setCrmPanelOpen}>
                 <SheetContent side="right" className="w-full max-w-sm p-0 [&>button]:hidden">
                   <SheetTitle className="sr-only">Painel CRM</SheetTitle>
