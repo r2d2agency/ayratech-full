@@ -53,7 +53,7 @@ router.get('/conversations/attendance-counts', authenticate, async (req, res) =>
 
     // Get user's role and department membership for visibility
     const userOrg = await getUserOrganization(req.userId);
-    const isAdminOrSupervisor = userOrg && ['owner', 'admin', 'manager'].includes(userOrg.role);
+    const isAdminOrSupervisor = userOrg && ['owner', 'admin'].includes(userOrg.role);
     
     const userDeptsResult = await query(
       `SELECT department_id, role FROM department_members WHERE user_id = $1`,
