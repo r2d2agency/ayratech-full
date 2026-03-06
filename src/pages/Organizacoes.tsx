@@ -47,6 +47,7 @@ interface OrganizationMember {
   name: string;
   email: string;
   role: 'owner' | 'admin' | 'manager' | 'agent';
+  is_active: boolean;
   assigned_connections: AssignedConnection[];
   assigned_departments: AssignedDepartment[];
   permission_template_id?: string;
