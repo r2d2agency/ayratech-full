@@ -32,21 +32,32 @@ export type NewConversationSoundId = typeof NEW_CONVERSATION_SOUNDS[number]['id'
 
 interface NotificationSoundSettings {
   soundEnabled: boolean;
+  soundEnabledMobile: boolean;
+  soundEnabledDesktop: boolean;
   soundId: NotificationSoundId;
   newConversationSoundId: NewConversationSoundId;
   pushEnabled: boolean;
   volume: number;
+  mutedConnections: string[]; // connection IDs that are muted
 }
 
 const SETTINGS_KEY = 'notification-sound-settings';
 
 const defaultSettings: NotificationSoundSettings = {
   soundEnabled: true,
+  soundEnabledMobile: true,
+  soundEnabledDesktop: true,
   soundId: 'default',
-  newConversationSoundId: 'chime', // Som diferenciado para novas conversas
+  newConversationSoundId: 'chime',
   pushEnabled: false,
   volume: 0.7,
+  mutedConnections: [],
 };
+
+// Detect if current device is mobile
+function isMobileDevice(): boolean {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768;
+}
 
 // Audio cache to avoid re-loading
 const audioCache: Record<string, HTMLAudioElement> = {};
