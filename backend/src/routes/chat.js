@@ -902,9 +902,32 @@ router.post('/conversations/:id/read', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
     
+    // When marking as read, auto-transition 'waiting' conversations to 'attending'
+    // and assign to the current user if not already assigned.
+    // This prevents conversations from disappearing when unread_count reaches 0
+    // while still in 'waiting' status (which is filtered out of the 'Atendendo' tab).
     await query(
-      `UPDATE conversations SET unread_count = 0, updated_at = NOW() WHERE id = $1`,
-      [id]
+      `UPDATE conversations 
+       SET unread_count = 0, 
+           updated_at = NOW(),
+           attendance_status = CASE 
+             WHEN attendance_status = 'waiting' THEN 'attending' 
+             ELSE attendance_status 
+           END,
+           accepted_at = CASE 
+             WHEN attendance_status = 'waiting' AND accepted_at IS NULL THEN NOW() 
+             ELSE accepted_at 
+           END,
+           accepted_by = CASE 
+             WHEN attendance_status = 'waiting' AND accepted_by IS NULL THEN $2 
+             ELSE accepted_by 
+           END,
+           assigned_to = CASE 
+             WHEN attendance_status = 'waiting' AND assigned_to IS NULL THEN $2 
+             ELSE assigned_to 
+           END
+       WHERE id = $1`,
+      [id, req.userId]
     );
 
     res.json({ success: true });
