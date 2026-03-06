@@ -357,6 +357,9 @@ router.get('/conversations/unread', authenticate, async (req, res) => {
         conv.contact_phone,
         conv.unread_count,
         conv.last_message_at,
+        conv.attendance_status,
+        conv.is_group,
+        conv.created_at,
         conn.name as connection_name,
         (SELECT content FROM chat_messages WHERE conversation_id = conv.id ORDER BY timestamp DESC LIMIT 1) as last_message,
         (SELECT message_type FROM chat_messages WHERE conversation_id = conv.id ORDER BY timestamp DESC LIMIT 1) as last_message_type
