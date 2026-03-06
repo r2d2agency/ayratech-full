@@ -673,11 +673,6 @@ export function ChatArea({
             <Search className={cn(isMobile ? "h-3.5 w-3.5" : "h-4 w-4")} />
           </Button>
 
-          {!isMobile && !!onSyncHistory && (
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowSyncDialog(true)} disabled={!!syncingHistory} title="Sincronizar histórico">
-              {syncingHistory ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            </Button>
-          )}
 
           {!isMobile && messages.length > 3 && <SentimentIndicator messages={messages} compact />}
 
