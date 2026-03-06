@@ -197,6 +197,7 @@ export function ChatArea({
   const [savingCall, setSavingCall] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [aiAgentActive, setAiAgentActive] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<ChatMessage | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
