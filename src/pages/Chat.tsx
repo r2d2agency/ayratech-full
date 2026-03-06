@@ -863,7 +863,7 @@ const Chat = () => {
               <ChatArea
                 conversation={selectedConversation} messages={messages} conversations={conversations} loading={loadingMessages} sending={sendingMessage}
                 tags={tags} team={team} syncingHistory={syncingHistory} isAdmin={isAdmin} userRole={userRole}
-                onSyncHistory={handleSyncHistory} onSendMessage={handleSendMessage} onLoadMore={handleLoadMoreMessages} hasMore={hasMoreMessages}
+                onSyncHistory={handleSyncHistory} onSendMessage={handleSendMessage} onForwardMessage={handleForwardMessage} onLoadMore={handleLoadMoreMessages} hasMore={hasMoreMessages}
                 onAddTag={handleAddTag} onRemoveTag={handleRemoveTag} onAssign={handleAssign} onArchive={handleArchive} onTransfer={handleTransfer} onCreateTag={handleCreateTag}
                 onDeleteConversation={async () => { if (!selectedConversation) return; try { await api(`/api/chat/conversations/${selectedConversation.id}`, { method: 'DELETE' }); toast.success('Conversa excluída'); setSelectedConversation(null); setMessages([]); loadConversations(); } catch (error: any) { toast.error(error.message || 'Erro ao excluir conversa'); } }}
                 onReleaseConversation={handleReleaseConversation} onFinishConversation={() => handleFinishConversation()} onReopenConversation={() => handleReopenConversation()}
