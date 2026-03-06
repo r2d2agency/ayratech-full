@@ -468,7 +468,7 @@ const Contatos = () => {
         </div>
 
         {/* Connection Filter */}
-        {syncConnections.length > 1 && (
+        {allConnections.length > 1 && (
           <div className="flex items-center gap-3 animate-fade-in">
             <Label className="text-sm text-muted-foreground whitespace-nowrap">Filtrar por conta:</Label>
             <Select value={filterConnectionId || "all"} onValueChange={(v) => setFilterConnectionId(v === "all" ? "" : v)}>
@@ -477,7 +477,7 @@ const Contatos = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as contas</SelectItem>
-                {syncConnections.map((conn) => (
+                {allConnections.map((conn) => (
                   <SelectItem key={conn.id} value={conn.id}>
                     {conn.name}{conn.phone_number ? ` (${conn.phone_number})` : ''}
                   </SelectItem>
