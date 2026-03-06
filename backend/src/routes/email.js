@@ -560,6 +560,12 @@ router.post('/send', async (req, res) => {
 
         const transporter = createTransporter(smtpConfig);
 
+        // Build attachments for nodemailer
+        const mailAttachments = (attachments || []).map(att => ({
+          filename: att.file_name,
+          path: att.file_url,
+        }));
+
         await transporter.sendMail({
           from: `"${smtpConfig.from_name}" <${smtpConfig.from_email}>`,
           to: to_name ? `"${to_name}" <${to_email}>` : to_email,
@@ -569,6 +575,7 @@ router.post('/send', async (req, res) => {
           subject: finalSubject,
           html: finalBodyHtml,
           text: finalBodyText,
+          attachments: mailAttachments.length > 0 ? mailAttachments : undefined,
         });
 
         // Update queue status
