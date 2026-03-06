@@ -898,6 +898,7 @@ export function ChatArea({
               isCurrentResult={searchResults[currentSearchIndex] === msg.id}
               searchQuery={searchQuery}
               onReply={setReplyingTo}
+              onForward={onForwardMessage ? (msg) => setForwardingMessage(msg) : undefined}
               onSendMessage={onSendMessage}
               onEditMessage={async (messageId, content) => {
                 const ok = await editMessage(conversation.id, messageId, content);
