@@ -121,6 +121,13 @@ const ContatosChat = () => {
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
   
+  // Add chat contact dialog (for agenda tab)
+  const [showAddChatContactDialog, setShowAddChatContactDialog] = useState(false);
+  const [newChatContactName, setNewChatContactName] = useState("");
+  const [newChatContactPhone, setNewChatContactPhone] = useState("");
+  const [newChatContactConnectionId, setNewChatContactConnectionId] = useState("");
+  const [addingChatContact, setAddingChatContact] = useState(false);
+  
   // Import dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState("");
@@ -135,6 +142,9 @@ const ContatosChat = () => {
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
   const [deletingBulk, setDeletingBulk] = useState(false);
+  
+  // Pagination for chat contacts
+  const [visibleCount, setVisibleCount] = useState(100);
 
   // Find W-API connection for bulk validation
   const wapiConnection = connections.find(c => (c as any).provider === 'wapi' || (c as any).instance_id);
