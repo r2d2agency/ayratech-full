@@ -116,7 +116,6 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
   const [newContactName, setNewContactName] = useState("");
   const [newContactPhone, setNewContactPhone] = useState("");
   const [creatingContact, setCreatingContact] = useState(false);
-  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showSequenceDialog, setShowSequenceDialog] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
