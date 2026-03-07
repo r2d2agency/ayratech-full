@@ -56,7 +56,71 @@ router.get('/:id([0-9a-fA-F-]{36})', async (req, res) => {
   }
 });
 
-// Get connections for organization (for member assignment)
+// Get organization theme
+router.get('/:id([0-9a-fA-F-]{36})/theme', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const memberCheck = await query(
+      `SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
+      [id, req.userId]
+    );
+    if (memberCheck.rows.length === 0) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+
+    const result = await query(
+      `SELECT theme_preset, theme_custom_colors FROM organizations WHERE id = $1`,
+      [id]
+    );
+    res.json(result.rows[0] || { theme_preset: null, theme_custom_colors: null });
+  } catch (error) {
+    // Column might not exist
+    if (/theme_preset|theme_custom_colors/i.test(String(error?.message || ''))) {
+      return res.json({ theme_preset: null, theme_custom_colors: null });
+    }
+    console.error('Get org theme error:', error);
+    res.status(500).json({ error: 'Erro ao buscar tema' });
+  }
+});
+
+// Update organization theme (admin/owner only)
+router.patch('/:id([0-9a-fA-F-]{36})/theme', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const memberCheck = await query(
+      `SELECT role FROM organization_members WHERE organization_id = $1 AND user_id = $2`,
+      [id, req.userId]
+    );
+    if (memberCheck.rows.length === 0 || !['owner', 'admin'].includes(memberCheck.rows[0].role)) {
+      return res.status(403).json({ error: 'Apenas admin/owner pode alterar o tema' });
+    }
+
+    const { theme_preset, theme_custom_colors } = req.body;
+
+    try {
+      await query(
+        `UPDATE organizations SET theme_preset = $1, theme_custom_colors = $2, updated_at = NOW() WHERE id = $3`,
+        [theme_preset || null, theme_custom_colors || null, id]
+      );
+    } catch (colError) {
+      if (/theme_preset|theme_custom_colors/i.test(String(colError?.message || ''))) {
+        await query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS theme_preset VARCHAR(50)`);
+        await query(`ALTER TABLE organizations ADD COLUMN IF NOT EXISTS theme_custom_colors TEXT`);
+        await query(
+          `UPDATE organizations SET theme_preset = $1, theme_custom_colors = $2, updated_at = NOW() WHERE id = $3`,
+          [theme_preset || null, theme_custom_colors || null, id]
+        );
+      } else throw colError;
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Update org theme error:', error);
+    res.status(500).json({ error: 'Erro ao salvar tema' });
+  }
+});
+
+
 router.get('/:id([0-9a-fA-F-]{36})/connections', async (req, res) => {
   try {
     const { id } = req.params;
