@@ -196,6 +196,50 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
     }
   }, [currentDeal?.description]);
 
+  // Create new contact and link to deal
+  const handleCreateAndLinkContact = async () => {
+    if (!newContactName.trim() || !newContactPhone.trim()) return;
+    
+    let phone = newContactPhone.replace(/\D/g, '');
+    if (phone.length <= 11) phone = '55' + phone;
+
+    setCreatingContact(true);
+    try {
+      // Get first available connection
+      const connections = await api<{ id: string }[]>('/api/connections');
+      if (!connections.length) {
+        toast.error("Nenhuma conexão disponível");
+        return;
+      }
+      
+      // Create contact in agenda
+      const contact = await api<{ id: string }>('/api/chat/contacts/by-phone', {
+        method: 'POST',
+        body: { phone, connection_id: connections[0].id, name: newContactName.trim() },
+      });
+      
+      // Link to deal
+      addContact.mutate({
+        dealId: deal!.id,
+        contactId: contact.id,
+        isPrimary: !fullDeal?.contacts?.length,
+      });
+      
+      // Refresh agenda contacts
+      const updated = await api<ChatContact[]>('/api/chat/contacts');
+      setAgendaContacts(updated);
+      
+      setNewContactName("");
+      setNewContactPhone("");
+      setShowNewContactForm(false);
+      toast.success("Contato criado e vinculado!");
+    } catch (err) {
+      toast.error("Erro ao criar contato");
+    } finally {
+      setCreatingContact(false);
+    }
+  };
+
   if (!deal) return null;
 
   const formatCurrency = (value: number) => {
