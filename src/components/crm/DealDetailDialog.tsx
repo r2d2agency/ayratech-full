@@ -112,6 +112,11 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
   const [contactSearchOpen, setContactSearchOpen] = useState(false);
   const [contactSearch, setContactSearch] = useState("");
   const [showEmailDialog, setShowEmailDialog] = useState(false);
+  const [showNewContactForm, setShowNewContactForm] = useState(false);
+  const [newContactName, setNewContactName] = useState("");
+  const [newContactPhone, setNewContactPhone] = useState("");
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [showSequenceDialog, setShowSequenceDialog] = useState(false);
   const [showNewProject, setShowNewProject] = useState(false);
   const [newProjectTitle, setNewProjectTitle] = useState("");
