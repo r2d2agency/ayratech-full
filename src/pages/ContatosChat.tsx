@@ -462,6 +462,39 @@ const ContatosChat = () => {
     }
   };
 
+  // Add chat contact manually
+  const handleAddChatContact = async () => {
+    if (!newChatContactName.trim() || !newChatContactPhone.trim() || !newChatContactConnectionId) {
+      toast.error("Preencha todos os campos");
+      return;
+    }
+
+    let phone = newChatContactPhone.replace(/\D/g, '');
+    if (phone.length <= 11) phone = '55' + phone;
+
+    setAddingChatContact(true);
+    try {
+      await api('/api/chat/contacts/by-phone', {
+        method: 'POST',
+        body: {
+          phone,
+          connection_id: newChatContactConnectionId,
+          name: newChatContactName.trim(),
+        },
+      });
+      toast.success("Contato adicionado à agenda!");
+      setNewChatContactName("");
+      setNewChatContactPhone("");
+      setNewChatContactConnectionId("");
+      setShowAddChatContactDialog(false);
+      loadData();
+    } catch (err) {
+      toast.error("Erro ao adicionar contato");
+    } finally {
+      setAddingChatContact(false);
+    }
+  };
+
   // Delete contact from agenda
   const handleDeleteChatContact = async (contactId: string) => {
     if (!confirm("Tem certeza que deseja excluir este contato da agenda?")) return;
