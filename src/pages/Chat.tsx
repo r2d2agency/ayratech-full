@@ -509,6 +509,7 @@ const Chat = () => {
         message_type: message.message_type,
         media_url: message.media_url || undefined,
         media_mimetype: message.media_mimetype || undefined,
+        is_forwarded: true,
       });
       toast.success('Mensagem encaminhada!');
       loadConversations();

@@ -75,6 +75,7 @@ export interface ChatMessage {
   timestamp: string;
   is_edited?: boolean;
   is_deleted?: boolean;
+  is_forwarded?: boolean;
   transcript?: string | null;
 }
 
@@ -337,6 +338,7 @@ export const useChat = () => {
     media_url?: string;
     media_mimetype?: string;
     quoted_message_id?: string;
+    is_forwarded?: boolean;
   }): Promise<ChatMessage> => {
     const data = await api<ChatMessage>(`/api/chat/conversations/${conversationId}/messages`, {
       method: 'POST',
