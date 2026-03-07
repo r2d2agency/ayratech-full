@@ -79,7 +79,7 @@ export function MessageNotifications() {
       
       // Check if new messages are from non-muted connections
       const hasUnmutedNewMessages = hasNewMessagesInExisting && data.some(conv => {
-        return conv.unread_count > 0 && !isConnectionMuted(conv.connection_id);
+        return conv.unread_count > 0 && !isConnectionMuted(conv.connection_id) && !isConversationMuted(conv.id);
       });
       
       // Play appropriate sound
