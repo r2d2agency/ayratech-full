@@ -82,10 +82,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const token = getAuthToken();
       if (token) {
         try {
-          const { user } = await authApi.getMe();
-          setUser(user);
-          if (user.organization_id) {
-            sessionStorage.setItem('user_org_id', user.organization_id);
+          const { user: userData } = await authApi.getMe();
+          const u = userData as any;
+          setUser(u);
+          if (u.organization_id) {
+            sessionStorage.setItem('user_org_id', u.organization_id);
           }
         } catch {
           clearAuthToken();
