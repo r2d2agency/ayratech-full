@@ -84,6 +84,7 @@ interface ConversationListProps {
     is_group: boolean;
     attendance_status: 'waiting' | 'attending' | 'finished';
     department: string;
+    favorite: boolean;
   };
   onFiltersChange: (filters: {
     search: string;
@@ -94,6 +95,7 @@ interface ConversationListProps {
     is_group: boolean;
     attendance_status: 'waiting' | 'attending' | 'finished';
     department: string;
+    favorite: boolean;
   }) => void;
   isAdmin?: boolean;
   connections?: Connection[];
