@@ -1094,7 +1094,7 @@ export function ChatArea({
                 <Textarea ref={textareaRef} placeholder="Digite uma mensagem... Use @ para mencionar" value={messageText} onChange={e => setMessageText(e.target.value)}
                   onKeyDown={e => { if (showMentionSuggestions && ['Enter', 'Tab', 'ArrowUp', 'ArrowDown'].includes(e.key)) return; handleKeyPress(e); }}
                   onPaste={handlePaste}
-                  className="min-h-[40px] max-h-[120px] resize-none" rows={1} />
+                  className={cn("resize-none", isMobile ? "min-h-[72px] max-h-[160px]" : "min-h-[40px] max-h-[120px]")} rows={isMobile ? 3 : 1} />
                 {showMentionSuggestions && <MentionSuggestions query={mentionQuery} team={team} onSelect={handleSelectMember} onClose={closeSuggestions} position={suggestionPosition} />}
               </div>
               {messageText.trim() ? (
