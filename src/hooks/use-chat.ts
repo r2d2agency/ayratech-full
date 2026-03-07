@@ -18,6 +18,7 @@ export interface Conversation {
   unread_count: number;
   is_archived: boolean;
   is_pinned: boolean;
+  pinned_message_id: string | null;
   is_group: boolean;
   group_name: string | null;
   assigned_to: string | null;
