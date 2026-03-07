@@ -1,6 +1,8 @@
 import express from 'express';
 import multer from 'multer';
 import { authenticate } from '../middleware/auth.js';
+import { query } from '../db.js';
+import { callAI } from '../lib/ai-caller.js';
 import { log, logError } from '../logger.js';
 
 const router = express.Router();
@@ -11,19 +13,43 @@ const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 } // 25MB limit
 });
 
-// POST /api/transcribe-audio - Transcribe audio using Lovable AI (Gemini)
+// Get AI config from organization
+async function getAIConfig(userId) {
+  // Get user's organization
+  const orgResult = await query(
+    `SELECT o.ai_provider, o.ai_model, o.ai_api_key 
+     FROM organizations o
+     JOIN organization_members om ON om.organization_id = o.id
+     WHERE om.user_id = $1 LIMIT 1`,
+    [userId]
+  );
+
+  const org = orgResult.rows[0];
+  if (!org || !org.ai_api_key || org.ai_provider === 'none') {
+    return null;
+  }
+
+  return {
+    provider: org.ai_provider,
+    model: org.ai_model || (org.ai_provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash'),
+    apiKey: org.ai_api_key,
+  };
+}
+
+// POST /api/transcribe-audio - Transcribe audio using org AI config
 router.post('/', authenticate, upload.single('audio'), async (req, res) => {
   try {
     const audioFile = req.file;
-    
+
     if (!audioFile) {
       return res.status(400).json({ error: 'No audio file provided' });
     }
 
-    const LOVABLE_API_KEY = process.env.LOVABLE_API_KEY;
-    if (!LOVABLE_API_KEY) {
-      logError('transcribe.missing_api_key', new Error('LOVABLE_API_KEY not configured'));
-      return res.status(500).json({ error: 'Transcription service not configured' });
+    const aiConfig = await getAIConfig(req.userId);
+    if (!aiConfig) {
+      return res.status(400).json({ 
+        error: 'IA não configurada. Configure a chave de IA nas configurações da organização.' 
+      });
     }
 
     // Convert audio to base64
@@ -33,81 +59,53 @@ router.post('/', authenticate, upload.single('audio'), async (req, res) => {
     log('info', 'transcribe.start', {
       size: audioFile.size,
       mimetype: mimeType,
-      originalName: audioFile.originalname
+      provider: aiConfig.provider,
     });
 
-    // Use Lovable AI (Gemini) for transcription
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
+    const messages = [
+      {
+        role: 'system',
+        content: 'Você é um transcritor de áudio profissional. Transcreva o áudio fornecido com precisão, mantendo pontuação adequada. Retorne APENAS o texto transcrito, sem explicações ou comentários adicionais. Se o áudio estiver vazio ou inaudível, retorne "[Áudio inaudível]".'
       },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
+      {
+        role: 'user',
+        content: [
           {
-            role: 'system',
-            content: 'Você é um transcritor de áudio profissional. Transcreva o áudio fornecido com precisão, mantendo pontuação adequada. Retorne APENAS o texto transcrito, sem explicações ou comentários adicionais. Se o áudio estiver vazio ou inaudível, retorne "[Áudio inaudível]".'
+            type: 'text',
+            text: 'Transcreva o seguinte áudio em português:'
           },
           {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: 'Transcreva o seguinte áudio em português:'
-              },
-              {
-                type: 'input_audio',
-                input_audio: {
-                  data: base64Audio,
-                  format: mimeType.includes('mp3') ? 'mp3' : 
-                          mimeType.includes('wav') ? 'wav' :
-                          mimeType.includes('ogg') ? 'ogg' :
-                          mimeType.includes('webm') ? 'webm' : 'mp3'
-                }
-              }
-            ]
+            type: 'input_audio',
+            input_audio: {
+              data: base64Audio,
+              format: mimeType.includes('mp3') ? 'mp3' :
+                      mimeType.includes('wav') ? 'wav' :
+                      mimeType.includes('ogg') ? 'ogg' :
+                      mimeType.includes('webm') ? 'webm' : 'mp3'
+            }
           }
-        ],
-      }),
+        ]
+      }
+    ];
+
+    const result = await callAI(aiConfig, messages, {
+      temperature: 0.1,
+      maxTokens: 4000,
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      logError('transcribe.ai_error', new Error(`AI gateway error: ${response.status}`), {
-        status: response.status,
-        body: errorText
-      });
-
-      if (response.status === 429) {
-        return res.status(429).json({ 
-          error: 'Limite de requisições excedido. Tente novamente em alguns minutos.' 
-        });
-      }
-
-      if (response.status === 402) {
-        return res.status(402).json({ 
-          error: 'Créditos insuficientes. Adicione créditos em Configurações > Workspace > Uso.' 
-        });
-      }
-
-      return res.status(500).json({ error: 'Erro no serviço de transcrição' });
-    }
-
-    const data = await response.json();
-    const transcript = data.choices?.[0]?.message?.content?.trim() || '';
+    const transcript = result.content?.trim() || '[Áudio inaudível]';
 
     log('info', 'transcribe.success', {
       transcriptLength: transcript.length,
-      preview: transcript.substring(0, 50)
+      preview: transcript.substring(0, 50),
+      provider: aiConfig.provider,
     });
 
     res.json({ transcript });
   } catch (error) {
     logError('transcribe.error', error);
-    res.status(500).json({ 
-      error: error.message || 'Erro ao transcrever áudio' 
+    res.status(500).json({
+      error: error.message || 'Erro ao transcrever áudio'
     });
   }
 });
