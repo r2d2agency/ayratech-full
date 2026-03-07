@@ -580,6 +580,11 @@ router.get('/conversations', authenticate, async (req, res) => {
         paramIndex++;
       }
 
+      // Filter by favorite
+      if (favorite === 'true') {
+        sql += ` AND COALESCE(conv.is_favorite, false) = true`;
+      }
+
       // Order by pinned first, then by last_message_at
       sql += ` ORDER BY COALESCE(conv.is_pinned, false) DESC, conv.last_message_at DESC NULLS LAST, conv.created_at DESC`;
 
