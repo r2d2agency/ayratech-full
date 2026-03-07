@@ -52,6 +52,8 @@ import {
   Building2,
   Briefcase,
   Sparkles,
+  BellOff,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatMessage, Conversation, ConversationTag, TeamMember } from "@/hooks/use-chat";
