@@ -204,6 +204,7 @@ export function AudioPlayer({ src, mimetype, className, isFromMe, messageId, sav
 
       const formData = new FormData();
       formData.append('audio', audioBlob, 'audio.ogg');
+      if (messageId) formData.append('messageId', messageId);
 
       const token = getAuthToken();
       const res = await fetch(`${API_URL}/api/transcribe-audio`, {
