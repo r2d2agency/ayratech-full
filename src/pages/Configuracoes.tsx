@@ -12,6 +12,7 @@ import { Settings, Shield, Bell, Save, Sun, Moon, Monitor, Volume2, VolumeX, Bel
 import { useTheme, Theme } from "@/hooks/use-theme";
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from "@/hooks/use-notification-sound";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { SMTPConfigPanel } from "@/components/email/SMTPConfigPanel";
