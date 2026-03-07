@@ -923,6 +923,42 @@ export function ChatArea({
         </div>
       )}
 
+      {/* Pinned Message Banner */}
+      {pinnedMessage && (
+        <div
+          className="flex items-center gap-2 px-4 py-2 border-b bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors"
+          onClick={() => {
+            const el = messageRefs.current.get(pinnedMessage.id);
+            el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }}
+        >
+          <Pin className="h-4 w-4 text-primary flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <span className="text-xs font-medium text-primary">Mensagem fixada</span>
+            <p className="text-xs text-muted-foreground line-clamp-1">
+              {pinnedMessage.message_type !== 'text'
+                ? (pinnedMessage.message_type === 'image' ? '📷 Imagem' : pinnedMessage.message_type === 'video' ? '🎥 Vídeo' : pinnedMessage.message_type === 'audio' ? '🎤 Áudio' : '📄 Documento')
+                : pinnedMessage.content}
+            </p>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            onClick={async (e) => {
+              e.stopPropagation();
+              const ok = await pinMessage(conversation.id, null);
+              if (ok) {
+                setPinnedMessage(null);
+                toast.success("Mensagem desafixada");
+              }
+            }}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+        </div>
+      )}
+
       {/* Messages */}
       <ScrollArea ref={scrollAreaRef} viewportRef={scrollContainerRef} className={cn("flex-1 chat-wallpaper min-w-0 relative", isMobile ? "p-3" : "p-4")}>
         {hasMore && (
@@ -948,21 +984,33 @@ export function ChatArea({
               onEditMessage={async (messageId, content) => {
                 const ok = await editMessage(conversation.id, messageId, content);
                 if (ok) {
-                  // Update local message state
                   const updatedMessages = messages.map(m => 
                     m.id === messageId ? { ...m, content, is_edited: true } : m
                   );
-                  onLoadMore(); // Reload messages
+                  onLoadMore();
                 }
                 return ok;
               }}
               onDeleteMessage={async (messageId) => {
                 const ok = await deleteMessageFn(conversation.id, messageId);
                 if (ok) {
-                  onLoadMore(); // Reload messages
+                  onLoadMore();
                 }
                 return ok;
               }}
+              onPinMessage={async (messageId) => {
+                const ok = await pinMessage(conversation.id, messageId);
+                if (ok) {
+                  if (messageId) {
+                    const msg = messages.find(m => m.id === messageId);
+                    setPinnedMessage(msg || null);
+                  } else {
+                    setPinnedMessage(null);
+                  }
+                }
+                return ok;
+              }}
+              isPinned={conversation.pinned_message_id === msg.id}
               highlightText={highlightText}
               getDocumentDisplayName={getDocumentDisplayName}
               looksLikeFilename={looksLikeFilename}
