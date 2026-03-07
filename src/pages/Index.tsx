@@ -86,25 +86,23 @@ const Index = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [listsData, messagesData, campaignsData, chatStats, attendanceCounts, orgs] = await Promise.all([
-        getLists(),
-        getMessages(),
-        getCampaigns(),
+      // Load critical data first (fast)
+      const attendancePromise = api<{ waiting: number; attending: number; finished: number }>('/api/chat/conversations/attendance-counts?is_group=false').catch(() => ({ waiting: 0, attending: 0, finished: 0 }));
+
+      // Load secondary data in parallel
+      const [listsData, messagesData, campaignsData, chatStats, attendanceCounts] = await Promise.all([
+        getLists().catch(() => []),
+        getMessages().catch(() => []),
+        getCampaigns().catch(() => []),
         getChatStats().catch(() => null),
-        api<{ waiting: number; attending: number; finished: number }>('/api/chat/conversations/attendance-counts?is_group=false').catch(() => ({ waiting: 0, attending: 0, finished: 0 })),
-        api<Array<{ id: string; name: string }>>('/api/organizations').catch(() => []),
+        attendancePromise,
       ]);
 
-      const orgId = orgs?.[0]?.id;
-      const members = orgId
-        ? await api<Array<{ id: string }>>(`/api/organizations/${orgId}/members`).catch(() => [])
-        : [];
-
-      const totalContacts = listsData.reduce((sum, list) => sum + Number(list.contact_count || 0), 0);
+      const totalContacts = (listsData as any[]).reduce((sum: number, list: any) => sum + Number(list.contact_count || 0), 0);
       const totalMessages = messagesData.length;
-      const activeCampaigns = campaignsData.filter(c => c.status === 'running').length;
-      const scheduledCampaigns = campaignsData.filter(c => c.status === 'pending').length;
-      const sentMessages = campaignsData.reduce((sum, c) => sum + c.sent_count, 0);
+      const activeCampaigns = (campaignsData as any[]).filter((c: any) => c.status === 'running').length;
+      const scheduledCampaigns = (campaignsData as any[]).filter((c: any) => c.status === 'pending').length;
+      const sentMessages = (campaignsData as any[]).reduce((sum: number, c: any) => sum + (c.sent_count || 0), 0);
 
       const assigned = chatStats?.conversations_by_status?.find(s => s.status === 'assigned')?.count ?? 0;
       const unassigned = chatStats?.conversations_by_status?.find(s => s.status === 'unassigned')?.count ?? 0;
@@ -120,24 +118,32 @@ const Index = () => {
         conversationsWaiting: attendanceCounts.waiting,
         conversationsAttending: attendanceCounts.attending,
         conversationsFinished: attendanceCounts.finished,
-        totalUsers: members.length,
+        totalUsers: 0,
         messagesToday: chatStats?.messages_today ?? 0,
         messagesWeek: chatStats?.messages_week ?? 0,
       });
 
       setRecentCampaigns(campaignsData.slice(0, 5));
+      setLoading(false);
+
+      // Load non-critical data after UI renders
+      try {
+        const orgs = await api<Array<{ id: string; name: string }>>('/api/organizations').catch(() => []);
+        const orgId = orgs?.[0]?.id;
+        if (orgId) {
+          const members = await api<Array<{ id: string }>>(`/api/organizations/${orgId}/members`).catch(() => []);
+          setStats(prev => ({ ...prev, totalUsers: members.length }));
+        }
+      } catch {}
     } catch (err) {
       console.error('Error loading dashboard:', err);
-    } finally {
       setLoading(false);
     }
   };
-
   const firstConnection = connections[0];
   const connectionStatus = firstConnection?.status === 'connected' ? 'connected' : 'disconnected';
   const connectionName = firstConnection?.name || "Nenhuma conexão";
   const connectionPhone = firstConnection?.phoneNumber;
-
   const totalAttendance = stats.conversationsWaiting + stats.conversationsAttending + stats.conversationsFinished;
 
   if (loading) {
