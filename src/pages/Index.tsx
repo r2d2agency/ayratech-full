@@ -305,6 +305,12 @@ const Index = () => {
                 finished: stats.conversationsFinished,
               }}
             />
+
+            {/* Hourly Distribution Chart */}
+            <HourlyChart 
+              className="animate-fade-in" 
+              connections={connections}
+            />
           </div>
 
           {/* Right Column */}
