@@ -580,7 +580,12 @@ router.post('/:connectionId/pairing-code', authenticate, async (req, res) => {
       return res.status(400).json({ error: 'Código de pareamento só é suportado para conexões W-API' });
     }
 
-    const token = connection.wapi_token || await getGlobalWapiToken();
+    // Resolve token: connection-level or global from system_settings
+    let token = connection.wapi_token;
+    if (!token) {
+      const tokenResult = await query(`SELECT value FROM system_settings WHERE key = 'wapi_token' LIMIT 1`);
+      token = tokenResult.rows[0]?.value || null;
+    }
     if (!token) {
       return res.status(400).json({ error: 'Token W-API não configurado' });
     }
