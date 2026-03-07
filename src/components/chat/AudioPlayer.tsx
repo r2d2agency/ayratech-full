@@ -10,6 +10,8 @@ interface AudioPlayerProps {
   mimetype?: string;
   className?: string;
   isFromMe?: boolean;
+  messageId?: string;
+  savedTranscript?: string | null;
 }
 
 export function AudioPlayer({ src, mimetype, className, isFromMe }: AudioPlayerProps) {
