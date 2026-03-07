@@ -41,7 +41,7 @@ const Configuracoes = () => {
   const [orgThemeCustom, setOrgThemeCustom] = useState<string | null>(null);
 
   // Load org theme on mount
-  useState(() => {
+  useEffect(() => {
     if (isAdminOrOwner && user?.organization_id) {
       apiCall<{ theme_preset: string | null; theme_custom_colors: string | null }>(
         `/api/organizations/${user.organization_id}/theme`
@@ -50,7 +50,7 @@ const Configuracoes = () => {
         setOrgThemeCustom(data.theme_custom_colors);
       }).catch(() => {});
     }
-  });
+  }, [user?.organization_id, isAdminOrOwner]);
 
   const [displayName, setDisplayName] = useState(user?.name || "");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
