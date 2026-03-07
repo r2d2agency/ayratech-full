@@ -1337,76 +1337,112 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
             <TabsContent value="contacts" className="m-0">
               {/* Add contact section */}
               <Card className="p-4 mb-4">
-                <h4 className="font-medium mb-3 flex items-center gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  Vincular Contato da Agenda
-                </h4>
-                
-                <div className="space-y-3">
-                  {/* Search agenda contacts */}
-                  <Popover open={contactSearchOpen} onOpenChange={setContactSearchOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start">
-                        <Search className="h-4 w-4 mr-2" />
-                        {loadingContacts ? "Carregando..." : "Buscar contato na agenda..."}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[350px] p-0 z-[200]" align="start">
-                      <Command>
-                        <CommandInput
-                          placeholder="Buscar por nome ou telefone..."
-                          value={contactSearch}
-                          onValueChange={setContactSearch}
-                        />
-                        <CommandList>
-                          <CommandEmpty>Nenhum contato encontrado.</CommandEmpty>
-                          <CommandGroup>
-                            {agendaContacts
-                              .filter((c) => {
-                                const search = contactSearch.toLowerCase();
-                                const name = c.name || c.phone || "";
-                                const phone = c.phone || "";
-                                return (
-                                  name.toLowerCase().includes(search) ||
-                                  phone.includes(search)
-                                );
-                              })
-                              .filter((c) => !fullDeal?.contacts?.some((dc: any) => dc.phone === c.phone))
-                              .slice(0, 15)
-                              .map((contact) => (
-                                <CommandItem
-                                  key={contact.id}
-                                  value={`${contact.name || ""} ${contact.phone || ""}`}
-                                  onSelect={() => {
-                                    addContact.mutate({
-                                      dealId: deal.id,
-                                      contactId: contact.id,
-                                      isPrimary: !fullDeal?.contacts?.length,
-                                    });
-                                    setContactSearchOpen(false);
-                                    setContactSearch("");
-                                    toast.success("Contato vinculado!");
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                      <User className="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                      <p className="font-medium">{contact.name || contact.phone}</p>
-                                      <p className="text-xs text-muted-foreground">
-                                        {contact.phone} {contact.connection_name && `• ${contact.connection_name}`}
-                                      </p>
-                                    </div>
-                                  </div>
-                                </CommandItem>
-                              ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    Adicionar Contato
+                  </h4>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowNewContactForm(!showNewContactForm)}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    {showNewContactForm ? "Vincular existente" : "Criar novo"}
+                  </Button>
                 </div>
+                
+                {showNewContactForm ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Input
+                        value={newContactName}
+                        onChange={(e) => setNewContactName(e.target.value)}
+                        placeholder="Nome do contato"
+                      />
+                      <Input
+                        value={newContactPhone}
+                        onChange={(e) => setNewContactPhone(e.target.value)}
+                        placeholder="Telefone (ex: 11999999999)"
+                      />
+                    </div>
+                    <Button
+                      onClick={handleCreateAndLinkContact}
+                      disabled={creatingContact || !newContactName.trim() || !newContactPhone.trim()}
+                      className="w-full"
+                      size="sm"
+                    >
+                      {creatingContact ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                      Criar e Vincular
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {/* Search agenda contacts */}
+                    <Popover open={contactSearchOpen} onOpenChange={setContactSearchOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start">
+                          <Search className="h-4 w-4 mr-2" />
+                          {loadingContacts ? "Carregando..." : "Buscar contato na agenda..."}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[350px] p-0 z-[200]" align="start">
+                        <Command>
+                          <CommandInput
+                            placeholder="Buscar por nome ou telefone..."
+                            value={contactSearch}
+                            onValueChange={setContactSearch}
+                          />
+                          <CommandList>
+                            <CommandEmpty>Nenhum contato encontrado.</CommandEmpty>
+                            <CommandGroup>
+                              {agendaContacts
+                                .filter((c) => {
+                                  const search = contactSearch.toLowerCase();
+                                  const name = c.name || c.phone || "";
+                                  const phone = c.phone || "";
+                                  return (
+                                    name.toLowerCase().includes(search) ||
+                                    phone.includes(search)
+                                  );
+                                })
+                                .filter((c) => !fullDeal?.contacts?.some((dc: any) => dc.phone === c.phone))
+                                .slice(0, 15)
+                                .map((contact) => (
+                                  <CommandItem
+                                    key={contact.id}
+                                    value={`${contact.name || ""} ${contact.phone || ""}`}
+                                    onSelect={() => {
+                                      addContact.mutate({
+                                        dealId: deal.id,
+                                        contactId: contact.id,
+                                        isPrimary: !fullDeal?.contacts?.length,
+                                      });
+                                      setContactSearchOpen(false);
+                                      setContactSearch("");
+                                      toast.success("Contato vinculado!");
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                        <User className="h-4 w-4" />
+                                      </div>
+                                      <div>
+                                        <p className="font-medium">{contact.name || contact.phone}</p>
+                                        <p className="text-xs text-muted-foreground">
+                                          {contact.phone} {contact.connection_name && `• ${contact.connection_name}`}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
               </Card>
 
               {/* Contact list */}
