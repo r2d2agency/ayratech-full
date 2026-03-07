@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAdminSettings } from '@/hooks/use-branding';
+import { useAdminSettings, applyThemeColors } from '@/hooks/use-branding';
 import { useUpload } from '@/hooks/use-upload';
 import { toast } from 'sonner';
 import { Upload, Loader2, Trash2, Image, Layout, Star, Save, Building2 } from 'lucide-react';
+import { ThemeCustomizer } from './ThemeCustomizer';
 
 interface LogoUploaderProps {
   label: string;
