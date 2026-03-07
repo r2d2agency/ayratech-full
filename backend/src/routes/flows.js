@@ -23,6 +23,113 @@ function isAdmin(role) {
 }
 
 // ============================================
+// FLOW CATEGORIES
+// ============================================
+
+router.get('/categories', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org) return res.status(403).json({ error: 'Acesso negado' });
+    const result = await query(
+      'SELECT * FROM flow_categories WHERE organization_id = $1 ORDER BY sort_order, name',
+      [org.organization_id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('List flow categories error:', error);
+    res.status(500).json({ error: 'Erro ao listar categorias' });
+  }
+});
+
+router.post('/categories', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org || !isAdmin(org.role)) return res.status(403).json({ error: 'Sem permissão' });
+    const { name, color } = req.body;
+    if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+    const result = await query(
+      'INSERT INTO flow_categories (organization_id, name, color) VALUES ($1, $2, $3) RETURNING *',
+      [org.organization_id, name, color || '#6366f1']
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create flow category error:', error);
+    res.status(500).json({ error: 'Erro ao criar categoria' });
+  }
+});
+
+router.patch('/categories/:id', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org || !isAdmin(org.role)) return res.status(403).json({ error: 'Sem permissão' });
+    const { name, color } = req.body;
+    const result = await query(
+      'UPDATE flow_categories SET name = COALESCE($1, name), color = COALESCE($2, color) WHERE id = $3 AND organization_id = $4 RETURNING *',
+      [name, color, req.params.id, org.organization_id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Categoria não encontrada' });
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update flow category error:', error);
+    res.status(500).json({ error: 'Erro ao atualizar categoria' });
+  }
+});
+
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org || !isAdmin(org.role)) return res.status(403).json({ error: 'Sem permissão' });
+    await query('UPDATE flows SET category_id = NULL WHERE category_id = $1', [req.params.id]);
+    await query('DELETE FROM flow_categories WHERE id = $1 AND organization_id = $2', [req.params.id, org.organization_id]);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete flow category error:', error);
+    res.status(500).json({ error: 'Erro ao deletar categoria' });
+  }
+});
+
+// ============================================
+// FLOW MEMBERS
+// ============================================
+
+router.get('/:id/members', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org) return res.status(403).json({ error: 'Acesso negado' });
+    const result = await query(
+      `SELECT fm.user_id, u.name, u.email FROM flow_members fm 
+       JOIN users u ON u.id = fm.user_id WHERE fm.flow_id = $1`,
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Get flow members error:', error);
+    res.status(500).json({ error: 'Erro ao buscar membros' });
+  }
+});
+
+router.put('/:id/members', async (req, res) => {
+  try {
+    const org = await getUserOrganization(req.userId);
+    if (!org || !isAdmin(org.role)) return res.status(403).json({ error: 'Sem permissão' });
+    const { user_ids } = req.body;
+    await query('DELETE FROM flow_members WHERE flow_id = $1', [req.params.id]);
+    if (user_ids && user_ids.length > 0) {
+      for (const uid of user_ids) {
+        await query(
+          'INSERT INTO flow_members (flow_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [req.params.id, uid]
+        );
+      }
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Save flow members error:', error);
+    res.status(500).json({ error: 'Erro ao salvar membros' });
+  }
+});
+
+// ============================================
 // FLOWS CRUD
 // ============================================
 
@@ -38,9 +145,16 @@ router.get('/', async (req, res) => {
       `SELECT 
         f.*,
         u.name as last_edited_by_name,
-        (SELECT COUNT(*) FROM flow_nodes WHERE flow_id = f.id) as node_count
+        fc.name as category_name,
+        fc.color as category_color,
+        (SELECT COUNT(*) FROM flow_nodes WHERE flow_id = f.id) as node_count,
+        COALESCE(
+          (SELECT array_agg(fm.user_id) FROM flow_members fm WHERE fm.flow_id = f.id),
+          '{}'
+        ) as member_ids
        FROM flows f
        LEFT JOIN users u ON u.id = f.last_edited_by
+       LEFT JOIN flow_categories fc ON fc.id = f.category_id
        WHERE f.organization_id = $1
        ORDER BY f.updated_at DESC`,
       [org.organization_id]
