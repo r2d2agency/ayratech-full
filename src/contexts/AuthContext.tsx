@@ -82,8 +82,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const token = getAuthToken();
       if (token) {
         try {
-          const { user } = await authApi.getMe();
-          setUser(user);
+          const { user: userData } = await authApi.getMe();
+          const u = userData as any;
+          setUser(u);
+          if (u.organization_id) {
+            sessionStorage.setItem('user_org_id', u.organization_id);
+          }
         } catch {
           clearAuthToken();
         }
@@ -94,9 +98,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const { user, token } = await authApi.login(email, password);
+    const { user: userData, token } = await authApi.login(email, password);
     setAuthToken(token);
-    setUser(user);
+    const u = userData as any;
+    setUser(u);
+    if (u.organization_id) {
+      sessionStorage.setItem('user_org_id', u.organization_id);
+    }
     toast({ title: 'Login realizado com sucesso!' });
   };
 

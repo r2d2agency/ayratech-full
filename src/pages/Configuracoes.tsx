@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,11 @@ import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings, Shield, Bell, Save, Sun, Moon, Monitor, Volume2, VolumeX, BellRing, Smartphone, User, Lock, Loader2, Mail, FileText, Sparkles } from "lucide-react";
+import { Settings, Shield, Bell, Save, Sun, Moon, Monitor, Volume2, VolumeX, BellRing, Smartphone, User, Lock, Loader2, Mail, FileText, Sparkles, Palette } from "lucide-react";
 import { useTheme, Theme } from "@/hooks/use-theme";
 import { useNotificationSound, NOTIFICATION_SOUNDS, NotificationSoundId } from "@/hooks/use-notification-sound";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { SMTPConfigPanel } from "@/components/email/SMTPConfigPanel";
@@ -21,6 +22,8 @@ import { AIConfigPanel } from "@/components/settings/AIConfigPanel";
 import { WorkSchedulePanel } from "@/components/settings/WorkSchedulePanel";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
 import { NotificationConnectionSettings } from "@/components/settings/NotificationConnectionSettings";
+import { ThemeCustomizer } from "@/components/admin/ThemeCustomizer";
+import { api as apiCall } from "@/lib/api";
 
 const Configuracoes = () => {
   const { user } = useAuth();
@@ -34,7 +37,22 @@ const Configuracoes = () => {
     isPushSupported,
   } = useNotificationSound();
 
-  // Profile state
+  const isAdminOrOwner = user?.role === 'owner' || user?.role === 'admin';
+  const [orgThemePreset, setOrgThemePreset] = useState<string | null>(null);
+  const [orgThemeCustom, setOrgThemeCustom] = useState<string | null>(null);
+
+  // Load org theme on mount
+  useEffect(() => {
+    if (isAdminOrOwner && user?.organization_id) {
+      apiCall<{ theme_preset: string | null; theme_custom_colors: string | null }>(
+        `/api/organizations/${user.organization_id}/theme`
+      ).then(data => {
+        setOrgThemePreset(data.theme_preset);
+        setOrgThemeCustom(data.theme_custom_colors);
+      }).catch(() => {});
+    }
+  }, [user?.organization_id, isAdminOrOwner]);
+
   const [displayName, setDisplayName] = useState(user?.name || "");
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
@@ -111,11 +129,17 @@ const Configuracoes = () => {
         </div>
 
         <Tabs defaultValue="geral" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className={cn("grid w-full", isAdminOrOwner ? "grid-cols-5 lg:w-[750px]" : "grid-cols-4 lg:w-[600px]")}>
             <TabsTrigger value="geral" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Geral
             </TabsTrigger>
+            {isAdminOrOwner && (
+              <TabsTrigger value="aparencia" className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                Aparência
+              </TabsTrigger>
+            )}
             <TabsTrigger value="ia" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               IA
@@ -533,7 +557,34 @@ const Configuracoes = () => {
             </div>
           </TabsContent>
 
-          {/* AI Settings Tab */}
+          {/* Appearance Tab */}
+          {isAdminOrOwner && (
+            <TabsContent value="aparencia" className="mt-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Aparência</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Personalize as cores do sistema para a sua empresa
+                  </p>
+                </div>
+                <ThemeCustomizer
+                  currentPreset={orgThemePreset}
+                  currentCustomColors={orgThemeCustom}
+                  onSave={async (preset, customColors) => {
+                    if (!user?.organization_id) return;
+                    await apiCall(`/api/organizations/${user.organization_id}/theme`, {
+                      method: 'PATCH',
+                      body: { theme_preset: preset, theme_custom_colors: customColors },
+                    });
+                    setOrgThemePreset(preset);
+                    setOrgThemeCustom(customColors);
+                  }}
+                />
+              </div>
+            </TabsContent>
+          )}
+
+
           <TabsContent value="ia" className="mt-6 space-y-6">
             <AIConfigPanel />
             <WorkSchedulePanel />
