@@ -53,6 +53,7 @@ const defaultSettings: NotificationSoundSettings = {
   pushEnabled: false,
   volume: 0.7,
   mutedConnections: [],
+  mutedConversations: [],
 };
 
 // Detect if current device is mobile
