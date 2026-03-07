@@ -53,6 +53,8 @@ import {
   Users,
   Building2,
   Smartphone,
+  Smartphone,
+  BellOff,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
