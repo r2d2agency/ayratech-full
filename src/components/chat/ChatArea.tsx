@@ -220,6 +220,7 @@ export function ChatArea({
   
   const finishWithSummary = useFinishWithSummary();
   const generateSummary = useGenerateSummary();
+  const { isConversationMuted, toggleConversationMute } = useNotificationSound();
   
   const { data: contactDeals, isLoading: loadingDeals } = useCRMDealsByPhone(
     conversation?.contact_phone && !conversation.is_group ? conversation.contact_phone : null
