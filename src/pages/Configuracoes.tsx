@@ -557,7 +557,34 @@ const Configuracoes = () => {
             </div>
           </TabsContent>
 
-          {/* AI Settings Tab */}
+          {/* Appearance Tab */}
+          {isAdminOrOwner && (
+            <TabsContent value="aparencia" className="mt-6">
+              <div className="space-y-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Aparência</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Personalize as cores do sistema para a sua empresa
+                  </p>
+                </div>
+                <ThemeCustomizer
+                  currentPreset={orgThemePreset}
+                  currentCustomColors={orgThemeCustom}
+                  onSave={async (preset, customColors) => {
+                    if (!user?.organization_id) return;
+                    await apiCall(`/api/organizations/${user.organization_id}/theme`, {
+                      method: 'PATCH',
+                      body: { theme_preset: preset, theme_custom_colors: customColors },
+                    });
+                    setOrgThemePreset(preset);
+                    setOrgThemeCustom(customColors);
+                  }}
+                />
+              </div>
+            </TabsContent>
+          )}
+
+
           <TabsContent value="ia" className="mt-6 space-y-6">
             <AIConfigPanel />
             <WorkSchedulePanel />
