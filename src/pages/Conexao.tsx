@@ -199,6 +199,27 @@ const handleGetQRCode = async (connection: Connection) => {
     }
   };
 
+  const handleGetPairingCode = async () => {
+    if (!selectedConnection || !pairingPhone.trim()) {
+      toast.error('Informe o número de telefone');
+      return;
+    }
+    setLoadingPairingCode(true);
+    setPairingCode(null);
+    try {
+      const result = await api<{ code: string }>(`/api/evolution/${selectedConnection.id}/pairing-code`, {
+        method: 'POST',
+        body: { phoneNumber: pairingPhone.trim() },
+      });
+      setPairingCode(result.code);
+      toast.success('Código de pareamento gerado!');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao gerar código de pareamento');
+    } finally {
+      setLoadingPairingCode(false);
+    }
+  };
+
   const handleCheckStatus = async (connection: Connection) => {
     setCheckingStatus(connection.id);
     try {
