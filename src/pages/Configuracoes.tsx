@@ -128,11 +128,17 @@ const Configuracoes = () => {
         </div>
 
         <Tabs defaultValue="geral" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 lg:w-[600px]">
+          <TabsList className={cn("grid w-full", isAdminOrOwner ? "grid-cols-5 lg:w-[750px]" : "grid-cols-4 lg:w-[600px]")}>
             <TabsTrigger value="geral" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
               Geral
             </TabsTrigger>
+            {isAdminOrOwner && (
+              <TabsTrigger value="aparencia" className="flex items-center gap-2">
+                <Palette className="h-4 w-4" />
+                Aparência
+              </TabsTrigger>
+            )}
             <TabsTrigger value="ia" className="flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
               IA
