@@ -1,6 +1,15 @@
 import { useState, useCallback } from 'react';
 import { API_URL, getAuthToken } from '@/lib/api';
 
+export interface FlowCategory {
+  id: string;
+  organization_id: string;
+  name: string;
+  color: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface Flow {
   id: string;
   organization_id: string;
@@ -12,10 +21,14 @@ export interface Flow {
   is_active: boolean;
   is_draft: boolean;
   connection_ids: string[];
+  category_id: string | null;
+  category_name?: string | null;
+  category_color?: string | null;
   version: number;
   last_edited_by: string | null;
   last_edited_by_name: string | null;
   node_count: number;
+  member_ids?: string[];
   created_at: string;
   updated_at: string;
 }
