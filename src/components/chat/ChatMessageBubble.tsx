@@ -166,6 +166,14 @@ export function ChatMessageBubble({
           </div>
         )}
 
+        {/* Forwarded indicator */}
+        {msg.is_forwarded && (
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground italic mb-1">
+            <Forward className="h-3 w-3" />
+            <span>Encaminhada</span>
+          </div>
+        )}
+
         {/* Quoted message */}
         {msg.quoted_message_id && msg.quoted_content && (
           <div className={cn(

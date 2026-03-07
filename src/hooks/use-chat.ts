@@ -75,6 +75,7 @@ export interface ChatMessage {
   timestamp: string;
   is_edited?: boolean;
   is_deleted?: boolean;
+  is_forwarded?: boolean;
   transcript?: string | null;
 }
 
