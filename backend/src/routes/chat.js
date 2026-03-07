@@ -1011,6 +1011,34 @@ router.post('/conversations/:id/pin', authenticate, async (req, res) => {
   }
 });
 
+// Favorite/Unfavorite conversation
+router.post('/conversations/:id/favorite', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { favorite } = req.body;
+    const connectionIds = await getUserConnections(req.userId);
+
+    const check = await query(
+      `SELECT id FROM conversations WHERE id = $1 AND connection_id = ANY($2)`,
+      [id, connectionIds]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversa não encontrada' });
+    }
+
+    await query(
+      `UPDATE conversations SET is_favorite = COALESCE($1, false), updated_at = NOW() WHERE id = $2`,
+      [favorite, id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Favorite conversation error:', error);
+    res.status(500).json({ error: 'Erro ao favoritar conversa' });
+  }
+});
+
 // Pin/Unpin a message in a conversation
 router.post('/conversations/:id/pin-message', authenticate, async (req, res) => {
   try {
