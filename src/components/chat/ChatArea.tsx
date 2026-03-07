@@ -52,6 +52,8 @@ import {
   Building2,
   Briefcase,
   Sparkles,
+  BellOff,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatMessage, Conversation, ConversationTag, TeamMember } from "@/hooks/use-chat";
@@ -68,6 +70,7 @@ import { ConversationSummaryPanel, SummaryBadge } from "./ConversationSummaryPan
 import { SentimentIndicator } from "./SentimentIndicator";
 import { ActionSuggestions } from "./ActionSuggestions";
 import { useFinishWithSummary, useGenerateSummary } from "@/hooks/use-conversation-summary";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 import { NotesPanel } from "./NotesPanel";
 import { AudioWaveform } from "./AudioWaveform";
 import { TypingIndicator } from "./TypingIndicator";
@@ -217,6 +220,7 @@ export function ChatArea({
   
   const finishWithSummary = useFinishWithSummary();
   const generateSummary = useGenerateSummary();
+  const { isConversationMuted, toggleConversationMute } = useNotificationSound();
   
   const { data: contactDeals, isLoading: loadingDeals } = useCRMDealsByPhone(
     conversation?.contact_phone && !conversation.is_group ? conversation.contact_phone : null
@@ -809,6 +813,10 @@ export function ChatArea({
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => { setSignMessages(!signMessages); }}>
                 <PenLine className="h-4 w-4 mr-2" />{signMessages ? 'Desativar assinatura' : 'Ativar assinatura'}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => { toggleConversationMute(conversation.id); toast.success(isConversationMuted(conversation.id) ? 'Notificações ativadas' : 'Conversa silenciada'); }}>
+                {isConversationMuted(conversation.id) ? <Bell className="h-4 w-4 mr-2" /> : <BellOff className="h-4 w-4 mr-2" />}
+                {isConversationMuted(conversation.id) ? 'Ativar notificações' : 'Silenciar conversa'}
               </DropdownMenuItem>
               {!isViewOnly && (
                 <>

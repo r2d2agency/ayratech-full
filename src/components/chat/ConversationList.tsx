@@ -53,6 +53,7 @@ import {
   Users,
   Building2,
   Smartphone,
+  BellOff,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -64,6 +65,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SwipeableConversationItem } from "./SwipeableConversationItem";
 import { GlobalSearchDialog } from "./GlobalSearchDialog";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 
 interface ConversationListProps {
   conversations: Conversation[];
@@ -182,6 +184,7 @@ export function ConversationList({
   const [myDepartments, setMyDepartments] = useState<Department[]>([]);
   const [allDepartments, setAllDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
+  const { isConversationMuted } = useNotificationSound();
 
   // Load departments
   useEffect(() => {
@@ -795,6 +798,11 @@ export function ConversationList({
                         <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                           {conv.assigned_name.split(' ')[0]}
                         </Badge>
+                      )}
+
+                      {/* Muted indicator */}
+                      {isConversationMuted(conv.id) && (
+                        <BellOff className="h-3 w-3 text-muted-foreground" />
                       )}
 
                       {/* Unread count */}

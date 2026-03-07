@@ -39,6 +39,7 @@ interface NotificationSoundSettings {
   pushEnabled: boolean;
   volume: number;
   mutedConnections: string[]; // connection IDs that are muted
+  mutedConversations: string[]; // conversation IDs that are muted
 }
 
 const SETTINGS_KEY = 'notification-sound-settings';
@@ -52,6 +53,7 @@ const defaultSettings: NotificationSoundSettings = {
   pushEnabled: false,
   volume: 0.7,
   mutedConnections: [],
+  mutedConversations: [],
 };
 
 // Detect if current device is mobile
@@ -136,6 +138,19 @@ export function useNotificationSound() {
     if (!connectionId) return false;
     return settings.mutedConnections.includes(connectionId);
   }, [settings.mutedConnections]);
+
+  const isConversationMuted = useCallback((conversationId?: string) => {
+    if (!conversationId) return false;
+    return (settings.mutedConversations || []).includes(conversationId);
+  }, [settings.mutedConversations]);
+
+  const toggleConversationMute = useCallback((conversationId: string) => {
+    const muted = settings.mutedConversations || [];
+    const newMuted = muted.includes(conversationId)
+      ? muted.filter(id => id !== conversationId)
+      : [...muted, conversationId];
+    updateSettings({ mutedConversations: newMuted });
+  }, [settings.mutedConversations, updateSettings]);
 
   const playSound = useCallback((customSoundId?: NotificationSoundId) => {
     if (!isSoundAllowedForDevice()) return;
@@ -232,6 +247,8 @@ export function useNotificationSound() {
     showPushNotification,
     notify,
     isConnectionMuted,
+    isConversationMuted,
+    toggleConversationMute,
     isMobileDevice: isMobileDevice(),
     isPushSupported: typeof window !== 'undefined' && 'Notification' in window,
   };
