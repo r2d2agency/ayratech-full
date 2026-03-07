@@ -172,52 +172,43 @@ const Chat = () => {
     }
   };
 
-  // Auto-refresh conversations every 15 seconds (backup - events handle immediate updates)
-  // Increased from 8s to 15s to reduce flickering
+  // Auto-refresh conversations (less frequent on mobile)
   useEffect(() => {
     const interval = setInterval(() => {
       loadConversationsRef.current();
-    }, 15000);
+    }, isMobile ? 30000 : 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isMobile]);
 
-  // Poll for new waiting conversations every 10 seconds (for notifications)
+  // Poll for new waiting conversations (less frequent on mobile)
   useEffect(() => {
     const interval = setInterval(() => {
       loadAttendanceCounts();
-    }, 10000);
+    }, isMobile ? 20000 : 10000);
     return () => clearInterval(interval);
-  }, [loadAttendanceCounts]);
+  }, [loadAttendanceCounts, isMobile]);
 
   // Subscribe to chat events for immediate updates
   useEffect(() => {
     const unsubscribe = chatEvents.subscribe('new_message', () => {
-      // Immediate refresh when notification detects new message
       loadConversationsRef.current();
-      
-      // Also refresh messages if a conversation is selected
       if (selectedConversation) {
         getMessages(selectedConversation.id).then(setMessages).catch(console.error);
       }
     });
-
     return unsubscribe;
   }, [selectedConversation, getMessages]);
 
-  // Listen for refresh-conversations event (from contact edit, etc.)
+  // Listen for refresh-conversations event
   useEffect(() => {
-    const handleRefresh = () => {
-      loadConversationsRef.current();
-    };
-    
+    const handleRefresh = () => { loadConversationsRef.current(); };
     window.addEventListener('refresh-conversations', handleRefresh);
     return () => window.removeEventListener('refresh-conversations', handleRefresh);
   }, []);
 
-  // Auto-refresh messages every 3 seconds when conversation is selected
+  // Auto-refresh messages (less frequent on mobile to save bandwidth)
   useEffect(() => {
     if (!selectedConversation) return;
-
     const interval = setInterval(async () => {
       try {
         const msgs = await getMessages(selectedConversation.id);
@@ -225,10 +216,9 @@ const Chat = () => {
       } catch (error) {
         console.error('Error refreshing messages:', error);
       }
-    }, 3000);
-
+    }, isMobile ? 8000 : 3000);
     return () => clearInterval(interval);
-  }, [selectedConversation?.id, getMessages]);
+  }, [selectedConversation?.id, getMessages, isMobile]);
 
   const loadConnections = async () => {
     try {
