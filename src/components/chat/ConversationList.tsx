@@ -54,6 +54,8 @@ import {
   Building2,
   Smartphone,
   BellOff,
+  Pin,
+  Star,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
