@@ -1011,7 +1011,56 @@ router.post('/conversations/:id/pin', authenticate, async (req, res) => {
   }
 });
 
-// Accept conversation (move from waiting to attending)
+// Pin/Unpin a message in a conversation
+router.post('/conversations/:id/pin-message', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { message_id } = req.body; // null to unpin
+    const connectionIds = await getUserConnections(req.userId);
+
+    const check = await query(
+      `SELECT id FROM conversations WHERE id = $1 AND connection_id = ANY($2)`,
+      [id, connectionIds]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversa não encontrada' });
+    }
+
+    if (message_id) {
+      // Verify message belongs to this conversation
+      const msgCheck = await query(
+        `SELECT id FROM chat_messages WHERE id = $1 AND conversation_id = $2`,
+        [message_id, id]
+      );
+      if (msgCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Mensagem não encontrada' });
+      }
+    }
+
+    await query(
+      `UPDATE conversations SET pinned_message_id = $1, updated_at = NOW() WHERE id = $2`,
+      [message_id || null, id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Pin message error:', error);
+    // If column doesn't exist, add it
+    if (/pinned_message_id/i.test(String(error?.message || ''))) {
+      try {
+        await query(`ALTER TABLE conversations ADD COLUMN IF NOT EXISTS pinned_message_id UUID REFERENCES chat_messages(id) ON DELETE SET NULL`);
+        await query(`UPDATE conversations SET pinned_message_id = $1, updated_at = NOW() WHERE id = $2`, [req.body.message_id || null, req.params.id]);
+        return res.json({ success: true });
+      } catch (e2) {
+        console.error('Failed to add pinned_message_id column:', e2);
+      }
+    }
+    res.status(500).json({ error: 'Erro ao fixar mensagem' });
+  }
+});
+
+
 router.post('/conversations/:id/accept', authenticate, async (req, res) => {
   try {
     const { id } = req.params;
