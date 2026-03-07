@@ -54,6 +54,10 @@ const Conexao = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loadingQr, setLoadingQr] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
+  const [connectMode, setConnectMode] = useState<'qr' | 'phone'>('qr');
+  const [pairingPhone, setPairingPhone] = useState("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [loadingPairingCode, setLoadingPairingCode] = useState(false);
   
   // Test message state
   const [testDialogOpen, setTestDialogOpen] = useState(false);
