@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Pencil,
   Trash2,
+  Pin,
   X,
   Send,
   Forward,
@@ -37,6 +38,8 @@ interface ChatMessageBubbleProps {
   onSendMessage: (content: string, type?: string, mediaUrl?: string, quotedMessageId?: string, mediaMimetype?: string) => Promise<void>;
   onEditMessage?: (messageId: string, content: string) => Promise<boolean>;
   onDeleteMessage?: (messageId: string) => Promise<boolean>;
+  onPinMessage?: (messageId: string | null) => Promise<boolean>;
+  isPinned?: boolean;
   highlightText: (text: string, query: string) => React.ReactNode;
   getDocumentDisplayName: (msg: ChatMessage, resolvedUrl?: string | null) => string;
   looksLikeFilename: (value: string) => boolean;
@@ -72,6 +75,8 @@ export function ChatMessageBubble({
   onSendMessage,
   onEditMessage,
   onDeleteMessage,
+  onPinMessage,
+  isPinned,
   highlightText,
   getDocumentDisplayName,
   looksLikeFilename,
@@ -137,6 +142,21 @@ export function ChatMessageBubble({
               title="Encaminhar"
             >
               <Forward className="h-3 w-3" />
+            </Button>
+          )}
+          {onPinMessage && !msg.is_deleted && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", isPinned && "text-primary")}
+              onClick={async () => {
+                const ok = await onPinMessage(isPinned ? null : msg.id);
+                if (ok) toast.success(isPinned ? "Mensagem desafixada" : "Mensagem fixada");
+                else toast.error("Falha ao fixar mensagem");
+              }}
+              title={isPinned ? "Desafixar" : "Fixar mensagem"}
+            >
+              <Pin className="h-3 w-3" />
             </Button>
           )}
         </div>
@@ -385,6 +405,21 @@ export function ChatMessageBubble({
               title="Encaminhar"
             >
               <Forward className="h-3 w-3" />
+            </Button>
+          )}
+          {onPinMessage && !msg.is_deleted && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn("h-6 w-6", isPinned && "text-primary")}
+              onClick={async () => {
+                const ok = await onPinMessage(isPinned ? null : msg.id);
+                if (ok) toast.success(isPinned ? "Mensagem desafixada" : "Mensagem fixada");
+                else toast.error("Falha ao fixar mensagem");
+              }}
+              title={isPinned ? "Desafixar" : "Fixar mensagem"}
+            >
+              <Pin className="h-3 w-3" />
             </Button>
           )}
           {canEdit && (

@@ -18,6 +18,7 @@ export interface Conversation {
   unread_count: number;
   is_archived: boolean;
   is_pinned: boolean;
+  pinned_message_id: string | null;
   is_group: boolean;
   group_name: string | null;
   assigned_to: string | null;
@@ -552,6 +553,20 @@ export const useChat = () => {
     }
   }, []);
 
+  // Pin/Unpin message
+  const pinMessage = useCallback(async (conversationId: string, messageId: string | null): Promise<boolean> => {
+    try {
+      await api(`/api/chat/conversations/${conversationId}/pin-message`, {
+        method: 'POST',
+        body: { message_id: messageId },
+      });
+      return true;
+    } catch (err: any) {
+      console.error('Erro ao fixar mensagem:', err);
+      return false;
+    }
+  }, []);
+
   // Edit message
   const editMessage = useCallback(async (conversationId: string, messageId: string, content: string): Promise<boolean> => {
     try {
@@ -602,6 +617,7 @@ export const useChat = () => {
     sendMessage,
     editMessage,
     deleteMessage: deleteMessageFn,
+    pinMessage,
     // Tags
     getTags,
     createTag,
