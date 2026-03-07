@@ -70,6 +70,7 @@ import { ConversationSummaryPanel, SummaryBadge } from "./ConversationSummaryPan
 import { SentimentIndicator } from "./SentimentIndicator";
 import { ActionSuggestions } from "./ActionSuggestions";
 import { useFinishWithSummary, useGenerateSummary } from "@/hooks/use-conversation-summary";
+import { useNotificationSound } from "@/hooks/use-notification-sound";
 import { NotesPanel } from "./NotesPanel";
 import { AudioWaveform } from "./AudioWaveform";
 import { TypingIndicator } from "./TypingIndicator";
