@@ -184,6 +184,7 @@ export function ConversationList({
   const [myDepartments, setMyDepartments] = useState<Department[]>([]);
   const [allDepartments, setAllDepartments] = useState<Department[]>([]);
   const { toast } = useToast();
+  const { isConversationMuted } = useNotificationSound();
 
   // Load departments
   useEffect(() => {
