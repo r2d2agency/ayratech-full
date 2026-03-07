@@ -290,7 +290,7 @@ const Chat = () => {
       isLoadingConversationsRef.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getConversations, filters.search, filters.tag, filters.assigned, filters.connection, filters.archived, filters.attendance_status, filters.department, activeTab, loadAttendanceCounts]);
+  }, [getConversations, filters.search, filters.tag, filters.assigned, filters.connection, filters.archived, filters.attendance_status, filters.department, filters.favorite, activeTab, loadAttendanceCounts]);
 
   // Keep ref pointing to the latest loadConversations (used by intervals above)
   useEffect(() => {
