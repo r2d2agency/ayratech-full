@@ -767,7 +767,7 @@ const ContatosChat = () => {
                     
                     <ScrollArea className="h-[400px]">
                       <div className="space-y-2">
-                        {filteredChatContacts.map((contact) => (
+                        {paginatedContacts.map((contact) => (
                           <div
                             key={contact.id}
                             className={cn(
@@ -835,12 +835,76 @@ const ContatosChat = () => {
                           </div>
                         </div>
                         ))}
+                        {hasMore && (
+                          <div className="flex justify-center pt-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => setVisibleCount(prev => prev + 100)}
+                            >
+                              Carregar mais ({filteredChatContacts.length - visibleCount} restantes)
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </ScrollArea>
                   </>
                 )}
               </CardContent>
             </Card>
+
+            {/* Add Chat Contact Dialog */}
+            <Dialog open={showAddChatContactDialog} onOpenChange={setShowAddChatContactDialog}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Adicionar Contato à Agenda</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Conexão *</Label>
+                    <Select value={newChatContactConnectionId} onValueChange={setNewChatContactConnectionId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a conexão" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {connections.filter(c => c.status === "connected").map(conn => (
+                          <SelectItem key={conn.id} value={conn.id}>
+                            {conn.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Nome *</Label>
+                    <Input
+                      value={newChatContactName}
+                      onChange={(e) => setNewChatContactName(e.target.value)}
+                      placeholder="Nome do contato"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone *</Label>
+                    <Input
+                      value={newChatContactPhone}
+                      onChange={(e) => setNewChatContactPhone(e.target.value)}
+                      placeholder="5511999999999"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowAddChatContactDialog(false)}>
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleAddChatContact}
+                    disabled={addingChatContact || !newChatContactName.trim() || !newChatContactPhone.trim() || !newChatContactConnectionId}
+                  >
+                    {addingChatContact ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
+                    Adicionar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Bulk Delete Confirmation Dialog */}
             <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
