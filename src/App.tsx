@@ -100,6 +100,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <FaviconUpdater />
+      <PWAUpdateBanner />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
