@@ -55,6 +55,8 @@ import {
   Sparkles,
   BellOff,
   Bell,
+  Pin,
+  X as XIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ChatMessage, Conversation, ConversationTag, TeamMember } from "@/hooks/use-chat";
