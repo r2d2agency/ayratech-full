@@ -560,6 +560,50 @@ router.get('/:connectionId/qrcode', authenticate, async (req, res) => {
   }
 });
 
+// Get pairing code for phone-based connection (W-API only)
+router.post('/:connectionId/pairing-code', authenticate, async (req, res) => {
+  try {
+    const { connectionId } = req.params;
+    const { phoneNumber } = req.body;
+
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Número de telefone é obrigatório' });
+    }
+
+    const connection = await getAccessibleConnection(connectionId, req.userId);
+    if (!connection) {
+      return res.status(404).json({ error: 'Conexão não encontrada' });
+    }
+
+    const provider = whatsappProvider.detectProvider(connection);
+    if (provider !== 'wapi') {
+      return res.status(400).json({ error: 'Código de pareamento só é suportado para conexões W-API' });
+    }
+
+    // Resolve token: connection-level or global from system_settings
+    let token = connection.wapi_token;
+    if (!token) {
+      const tokenResult = await query(`SELECT value FROM system_settings WHERE key = 'wapi_token' LIMIT 1`);
+      token = tokenResult.rows[0]?.value || null;
+    }
+    if (!token) {
+      return res.status(400).json({ error: 'Token W-API não configurado' });
+    }
+
+    const wapiProvider = await import('../lib/wapi-provider.js');
+    const result = await wapiProvider.getPairingCode(connection.instance_id, token, phoneNumber);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Erro ao gerar código de pareamento' });
+    }
+
+    res.json({ code: result.code });
+  } catch (error) {
+    logError('connection.pairing_code_failed', error, { connection_id: req.params.connectionId });
+    res.status(500).json({ error: 'Erro ao gerar código de pareamento' });
+  }
+});
+
 // Check connection status (supports both Evolution API and W-API)
 router.get('/:connectionId/status', authenticate, async (req, res) => {
   try {

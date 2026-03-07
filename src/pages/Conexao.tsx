@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check, History } from "lucide-react";
+import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check, History, Smartphone } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
@@ -54,6 +54,10 @@ const Conexao = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [loadingQr, setLoadingQr] = useState(false);
   const [checkingStatus, setCheckingStatus] = useState<string | null>(null);
+  const [connectMode, setConnectMode] = useState<'qr' | 'phone'>('qr');
+  const [pairingPhone, setPairingPhone] = useState("");
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [loadingPairingCode, setLoadingPairingCode] = useState(false);
   
   // Test message state
   const [testDialogOpen, setTestDialogOpen] = useState(false);
@@ -192,6 +196,27 @@ const handleGetQRCode = async (connection: Connection) => {
       toast.error('Erro ao atualizar QR Code');
     } finally {
       setLoadingQr(false);
+    }
+  };
+
+  const handleGetPairingCode = async () => {
+    if (!selectedConnection || !pairingPhone.trim()) {
+      toast.error('Informe o número de telefone');
+      return;
+    }
+    setLoadingPairingCode(true);
+    setPairingCode(null);
+    try {
+      const result = await api<{ code: string }>(`/api/evolution/${selectedConnection.id}/pairing-code`, {
+        method: 'POST',
+        body: { phoneNumber: pairingPhone.trim() },
+      });
+      setPairingCode(result.code);
+      toast.success('Código de pareamento gerado!');
+    } catch (error: any) {
+      toast.error(error?.message || 'Erro ao gerar código de pareamento');
+    } finally {
+      setLoadingPairingCode(false);
     }
   };
 
@@ -1228,8 +1253,15 @@ const handleGetQRCode = async (connection: Connection) => {
           </DialogContent>
         </Dialog>
 
-        {/* QR Code Dialog */}
-        <Dialog open={qrCodeDialog} onOpenChange={setQrCodeDialog}>
+        {/* QR Code / Phone Code Dialog */}
+        <Dialog open={qrCodeDialog} onOpenChange={(open) => {
+          setQrCodeDialog(open);
+          if (!open) {
+            setConnectMode('qr');
+            setPairingCode(null);
+            setPairingPhone('');
+          }
+        }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -1237,63 +1269,157 @@ const handleGetQRCode = async (connection: Connection) => {
                 Conectar WhatsApp
               </DialogTitle>
               <DialogDescription>
-                Escaneie o QR Code com seu WhatsApp para conectar.
+                Escolha como deseja conectar seu WhatsApp.
               </DialogDescription>
             </DialogHeader>
+
+            {/* Mode Toggle */}
+            {selectedConnection && (selectedConnection.provider === 'wapi' || !!selectedConnection.instance_id) && (
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                <button
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
+                    connectMode === 'qr' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                  }`}
+                  onClick={() => setConnectMode('qr')}
+                >
+                  <QrCode className="h-4 w-4" />
+                  QR Code
+                </button>
+                <button
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium transition-colors ${
+                    connectMode === 'phone' 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                  }`}
+                  onClick={() => setConnectMode('phone')}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  Código por Telefone
+                </button>
+              </div>
+            )}
             
-            <div className="flex flex-col items-center justify-center py-6">
-              {loadingQr ? (
-                <div className="flex h-64 w-64 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/50">
-                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            {connectMode === 'qr' ? (
+              <div className="flex flex-col items-center justify-center py-6">
+                {loadingQr ? (
+                  <div className="flex h-64 w-64 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/50">
+                    <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                  </div>
+                ) : qrCode ? (
+                  <div className="rounded-xl border-2 border-primary/20 bg-white p-4">
+                    <img
+                      src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
+                      alt="QR Code WhatsApp"
+                      className="h-64 w-64"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex h-64 w-64 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/50">
+                    <div className="text-center">
+                      <QrCode className="mx-auto h-16 w-16 text-muted-foreground/50" />
+                      <p className="mt-4 text-sm text-muted-foreground">
+                        Clique em atualizar para gerar o QR Code
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    onClick={handleRefreshQRCode}
+                    disabled={loadingQr}
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${loadingQr ? 'animate-spin' : ''}`} />
+                    Atualizar
+                  </Button>
+                  {selectedConnection && (
+                    <Button
+                      variant="default"
+                      onClick={() => handleCheckStatus(selectedConnection)}
+                      disabled={checkingStatus === selectedConnection.id}
+                    >
+                      {checkingStatus === selectedConnection.id ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Plug className="h-4 w-4 mr-2" />
+                      )}
+                      Verificar
+                    </Button>
+                  )}
                 </div>
-              ) : qrCode ? (
-                <div className="rounded-xl border-2 border-primary/20 bg-white p-4">
-                  <img
-                    src={qrCode.startsWith("data:") ? qrCode : `data:image/png;base64,${qrCode}`}
-                    alt="QR Code WhatsApp"
-                    className="h-64 w-64"
-                  />
+
+                <p className="text-xs text-muted-foreground mt-4 text-center">
+                  O status será verificado automaticamente a cada 5 segundos
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 space-y-4">
+                <div className="w-full space-y-2">
+                  <Label>Número do Telefone</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="5511999999999"
+                      value={pairingPhone}
+                      onChange={(e) => setPairingPhone(e.target.value)}
+                      className="flex-1"
+                    />
+                    <Button
+                      onClick={handleGetPairingCode}
+                      disabled={loadingPairingCode || !pairingPhone.trim()}
+                    >
+                      {loadingPairingCode ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        'Gerar Código'
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Informe o número com código do país (ex: 5511999999999)
+                  </p>
                 </div>
-              ) : (
-                <div className="flex h-64 w-64 items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/50">
-                  <div className="text-center">
-                    <QrCode className="mx-auto h-16 w-16 text-muted-foreground/50" />
-                    <p className="mt-4 text-sm text-muted-foreground">
-                      Clique em atualizar para gerar o QR Code
+
+                {pairingCode && (
+                  <div className="w-full rounded-xl border-2 border-primary/20 bg-muted/30 p-6 text-center space-y-3">
+                    <p className="text-sm text-muted-foreground">Seu código de pareamento:</p>
+                    <p className="text-3xl font-bold tracking-widest text-foreground font-mono">
+                      {pairingCode}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      No WhatsApp, vá em <strong>Dispositivos Conectados</strong> → <strong>Conectar Dispositivo</strong> → <strong>Conectar com número de telefone</strong> e insira este código.
                     </p>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="flex gap-2 mt-4">
-                <Button
-                  variant="outline"
-                  onClick={handleRefreshQRCode}
-                  disabled={loadingQr}
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${loadingQr ? 'animate-spin' : ''}`} />
-                  Atualizar
-                </Button>
+                {!pairingCode && !loadingPairingCode && (
+                  <div className="rounded-xl border-2 border-dashed border-border bg-muted/50 p-8 text-center">
+                    <Smartphone className="mx-auto h-12 w-12 text-muted-foreground/50 mb-3" />
+                    <p className="text-sm text-muted-foreground">
+                      Conecte sem câmera! Gere um código numérico e insira diretamente no WhatsApp.
+                    </p>
+                  </div>
+                )}
+
                 {selectedConnection && (
                   <Button
                     variant="default"
                     onClick={() => handleCheckStatus(selectedConnection)}
                     disabled={checkingStatus === selectedConnection.id}
+                    className="w-full"
                   >
                     {checkingStatus === selectedConnection.id ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Plug className="h-4 w-4 mr-2" />
                     )}
-                    Verificar
+                    Verificar Conexão
                   </Button>
                 )}
               </div>
-
-              <p className="text-xs text-muted-foreground mt-4 text-center">
-                O status será verificado automaticamente a cada 5 segundos
-              </p>
-            </div>
+            )}
           </DialogContent>
         </Dialog>
         {/* Test Message Dialog */}
