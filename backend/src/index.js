@@ -208,6 +208,18 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Diagnostic endpoint to check Google Calendar env vars
+app.get('/api/debug/google-config', (req, res) => {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const frontendUrl = process.env.FRONTEND_URL;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  res.json({
+    GOOGLE_CLIENT_ID: clientId ? `${clientId.substring(0, 15)}...` : 'NOT SET',
+    GOOGLE_REDIRECT_URI: redirectUri || 'NOT SET (will use localhost fallback)',
+    FRONTEND_URL: frontendUrl || 'NOT SET (will use localhost fallback)',
+  });
+});
+
 // Global error handler with CORS headers
 app.use((err, req, res, next) => {
   logError('http.unhandled_error', err, {
