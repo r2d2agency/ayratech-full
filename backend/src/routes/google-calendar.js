@@ -69,22 +69,23 @@ router.get('/auth-url', authenticate, async (req, res) => {
 
 // OAuth callback - exchange code for tokens
 router.get('/callback', async (req, res) => {
+  const config = getConfig();
   try {
     const { code, state, error: oauthError } = req.query;
 
     if (oauthError) {
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(oauthError)}`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(oauthError)}`);
     }
 
     if (!code || !state) {
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=missing_params`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=missing_params`);
     }
 
     // Validate state token
     const stateData = stateTokens.get(state);
     if (!stateData || stateData.expires < Date.now()) {
       stateTokens.delete(state);
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=invalid_state`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=invalid_state`);
     }
 
     const userId = stateData.userId;
@@ -96,9 +97,9 @@ router.get('/callback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: GOOGLE_REDIRECT_URI,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: config.redirectUri,
         grant_type: 'authorization_code',
       }),
     });
@@ -107,7 +108,7 @@ router.get('/callback', async (req, res) => {
 
     if (!tokenResponse.ok) {
       logError('Token exchange failed:', tokenData);
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(tokenData.error || 'token_exchange_failed')}`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(tokenData.error || 'token_exchange_failed')}`);
     }
 
     // Get user info
@@ -139,10 +140,10 @@ router.get('/callback', async (req, res) => {
     );
 
     logInfo(`Google Calendar connected for user ${userId}: ${userInfo.email}`);
-    res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_success=true`);
+    res.redirect(`${config.frontendUrl}/crm/configuracoes?google_success=true`);
   } catch (error) {
     logError('OAuth callback error:', error);
-    res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(error.message)}`);
+    res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(error.message)}`);
   }
 });
 
