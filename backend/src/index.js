@@ -59,7 +59,7 @@ import { checkInactivityTimeouts } from './lib/ai-agent-processor.js';
 import { requestContext } from './request-context.js';
 import { log, logError } from './logger.js';
 
-dotenv.config();
+// dotenv already loaded via 'dotenv/config' import at top
 
 const app = express();
 const PORT = process.env.PORT || 3001;
