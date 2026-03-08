@@ -1,7 +1,10 @@
+import 'dotenv/config'; // Preload — side-effect import, loads .env BEFORE other modules
+
+import express from 'express';
+
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
-import dotenv from 'dotenv';
 import cron from 'node-cron';
 import crypto from 'crypto';
 import authRoutes from './routes/auth.js';
@@ -56,7 +59,7 @@ import { checkInactivityTimeouts } from './lib/ai-agent-processor.js';
 import { requestContext } from './request-context.js';
 import { log, logError } from './logger.js';
 
-dotenv.config();
+// dotenv already loaded via 'dotenv/config' import at top
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -203,6 +206,18 @@ app.use('/api/lead-gleego', leadGleegoRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Diagnostic endpoint to check Google Calendar env vars
+app.get('/api/debug/google-config', (req, res) => {
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+  const frontendUrl = process.env.FRONTEND_URL;
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  res.json({
+    GOOGLE_CLIENT_ID: clientId ? `${clientId.substring(0, 15)}...` : 'NOT SET',
+    GOOGLE_REDIRECT_URI: redirectUri || 'NOT SET (will use localhost fallback)',
+    FRONTEND_URL: frontendUrl || 'NOT SET (will use localhost fallback)',
+  });
 });
 
 // Global error handler with CORS headers
