@@ -38,7 +38,10 @@ const stateTokens = new Map();
 // Get auth URL - initiate OAuth flow
 router.get('/auth-url', authenticate, async (req, res) => {
   try {
-    if (!GOOGLE_CLIENT_ID) {
+    const config = getConfig();
+    console.log('[Google Calendar] auth-url config:', { redirectUri: config.redirectUri, clientId: config.clientId ? 'SET' : 'NOT SET' });
+
+    if (!config.clientId) {
       return res.status(500).json({ error: 'Google OAuth not configured' });
     }
 
@@ -47,12 +50,12 @@ router.get('/auth-url', authenticate, async (req, res) => {
     stateTokens.set(state, { userId: req.userId, expires: Date.now() + 600000 }); // 10 min
 
     const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: GOOGLE_REDIRECT_URI,
+      client_id: config.clientId,
+      redirect_uri: config.redirectUri,
       response_type: 'code',
       scope: SCOPES,
-      access_type: 'offline', // Get refresh token
-      prompt: 'consent', // Always show consent screen to get refresh token
+      access_type: 'offline',
+      prompt: 'consent',
       state,
     });
 
