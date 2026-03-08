@@ -6,18 +6,15 @@ import { logInfo, logError } from '../logger.js';
 
 const router = express.Router();
 
-// Google OAuth configuration
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/google-calendar/callback';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-
-// Debug: log loaded config on startup
-console.log('[Google Calendar] Config loaded:', {
-  clientId: GOOGLE_CLIENT_ID ? `${GOOGLE_CLIENT_ID.substring(0, 20)}...` : 'NOT SET',
-  redirectUri: GOOGLE_REDIRECT_URI,
-  frontendUrl: FRONTEND_URL,
-});
+// Google OAuth configuration - read lazily to ensure dotenv has loaded
+function getConfig() {
+  return {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/api/google-calendar/callback',
+    frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
+  };
+}
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -41,7 +38,10 @@ const stateTokens = new Map();
 // Get auth URL - initiate OAuth flow
 router.get('/auth-url', authenticate, async (req, res) => {
   try {
-    if (!GOOGLE_CLIENT_ID) {
+    const config = getConfig();
+    console.log('[Google Calendar] auth-url config:', { redirectUri: config.redirectUri, clientId: config.clientId ? 'SET' : 'NOT SET' });
+
+    if (!config.clientId) {
       return res.status(500).json({ error: 'Google OAuth not configured' });
     }
 
@@ -50,12 +50,12 @@ router.get('/auth-url', authenticate, async (req, res) => {
     stateTokens.set(state, { userId: req.userId, expires: Date.now() + 600000 }); // 10 min
 
     const params = new URLSearchParams({
-      client_id: GOOGLE_CLIENT_ID,
-      redirect_uri: GOOGLE_REDIRECT_URI,
+      client_id: config.clientId,
+      redirect_uri: config.redirectUri,
       response_type: 'code',
       scope: SCOPES,
-      access_type: 'offline', // Get refresh token
-      prompt: 'consent', // Always show consent screen to get refresh token
+      access_type: 'offline',
+      prompt: 'consent',
       state,
     });
 
@@ -69,22 +69,23 @@ router.get('/auth-url', authenticate, async (req, res) => {
 
 // OAuth callback - exchange code for tokens
 router.get('/callback', async (req, res) => {
+  const config = getConfig();
   try {
     const { code, state, error: oauthError } = req.query;
 
     if (oauthError) {
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(oauthError)}`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(oauthError)}`);
     }
 
     if (!code || !state) {
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=missing_params`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=missing_params`);
     }
 
     // Validate state token
     const stateData = stateTokens.get(state);
     if (!stateData || stateData.expires < Date.now()) {
       stateTokens.delete(state);
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=invalid_state`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=invalid_state`);
     }
 
     const userId = stateData.userId;
@@ -96,9 +97,9 @@ router.get('/callback', async (req, res) => {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: GOOGLE_REDIRECT_URI,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: config.redirectUri,
         grant_type: 'authorization_code',
       }),
     });
@@ -107,7 +108,7 @@ router.get('/callback', async (req, res) => {
 
     if (!tokenResponse.ok) {
       logError('Token exchange failed:', tokenData);
-      return res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(tokenData.error || 'token_exchange_failed')}`);
+      return res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(tokenData.error || 'token_exchange_failed')}`);
     }
 
     // Get user info
@@ -139,10 +140,10 @@ router.get('/callback', async (req, res) => {
     );
 
     logInfo(`Google Calendar connected for user ${userId}: ${userInfo.email}`);
-    res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_success=true`);
+    res.redirect(`${config.frontendUrl}/crm/configuracoes?google_success=true`);
   } catch (error) {
     logError('OAuth callback error:', error);
-    res.redirect(`${FRONTEND_URL}/crm/configuracoes?google_error=${encodeURIComponent(error.message)}`);
+    res.redirect(`${config.frontendUrl}/crm/configuracoes?google_error=${encodeURIComponent(error.message)}`);
   }
 });
 
@@ -211,13 +212,14 @@ async function getValidAccessToken(userId) {
 
   // Check if token is expired or about to expire (5 min buffer)
   if (new Date(token.expires_at) <= new Date(Date.now() + 300000)) {
+    const config = getConfig();
     // Refresh the token
     const refreshResponse = await fetch(GOOGLE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
         refresh_token: token.refresh_token,
         grant_type: 'refresh_token',
       }),
