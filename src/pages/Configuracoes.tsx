@@ -23,6 +23,7 @@ import { WorkSchedulePanel } from "@/components/settings/WorkSchedulePanel";
 import { PushNotificationSettings } from "@/components/settings/PushNotificationSettings";
 import { NotificationConnectionSettings } from "@/components/settings/NotificationConnectionSettings";
 import { ThemeCustomizer } from "@/components/admin/ThemeCustomizer";
+import { GoogleCalendarPanel } from "@/components/crm/GoogleCalendarPanel";
 import { api as apiCall } from "@/lib/api";
 
 const Configuracoes = () => {
