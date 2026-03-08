@@ -1,5 +1,6 @@
-import dotenv from 'dotenv';
-dotenv.config(); // MUST be before any other imports that read process.env
+import 'dotenv/config'; // Preload — side-effect import, loads .env BEFORE other modules
+
+import express from 'express';
 
 import express from 'express';
 import cors from 'cors';
