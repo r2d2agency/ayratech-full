@@ -2255,6 +2255,64 @@ router.post('/conversations/:id/transfer', authenticate, async (req, res) => {
   }
 });
 
+// Transfer conversation to another connection
+router.post('/conversations/:id/transfer-connection', authenticate, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { connection_id: targetConnectionId } = req.body;
+
+    if (!targetConnectionId) {
+      return res.status(400).json({ error: 'connection_id é obrigatório' });
+    }
+
+    const connectionIds = await getUserConnections(req.userId);
+
+    // Check user has access to the conversation (including orphaned ones with null connection_id)
+    const check = await query(
+      `SELECT id, connection_id, contact_name, contact_phone FROM conversations WHERE id = $1 AND (connection_id = ANY($2) OR connection_id IS NULL)`,
+      [id, connectionIds]
+    );
+
+    if (check.rows.length === 0) {
+      return res.status(404).json({ error: 'Conversa não encontrada' });
+    }
+
+    // Check user has access to target connection
+    if (!connectionIds.includes(targetConnectionId)) {
+      return res.status(403).json({ error: 'Sem acesso à conexão de destino' });
+    }
+
+    // Update conversation connection
+    await query(
+      `UPDATE conversations SET connection_id = $1, updated_at = NOW() WHERE id = $2`,
+      [targetConnectionId, id]
+    );
+
+    // Update related chat_messages connection_id
+    await query(
+      `UPDATE chat_messages SET connection_id = $1 WHERE conversation_id = $2`,
+      [targetConnectionId, id]
+    );
+
+    // Add system message
+    const targetConn = await query(`SELECT name FROM connections WHERE id = $1`, [targetConnectionId]);
+    const fromUser = await query(`SELECT name FROM users WHERE id = $1`, [req.userId]);
+    const systemMsg = `🔄 Conversa transferida para conexão "${targetConn.rows[0]?.name || 'Nova conexão'}" por ${fromUser.rows[0]?.name || 'Sistema'}`;
+
+    await query(
+      `INSERT INTO chat_messages 
+        (conversation_id, connection_id, from_me, content, message_type, status, timestamp)
+       VALUES ($1, $2, true, $3, 'system', 'sent', NOW())`,
+      [id, targetConnectionId, systemMsg]
+    );
+
+    res.json({ success: true, message: 'Conversa transferida para outra conexão' });
+  } catch (error) {
+    console.error('Transfer conversation connection error:', error);
+    res.status(500).json({ error: 'Erro ao transferir conversa de conexão' });
+  }
+});
+
 // ==========================================
 // INTERNAL NOTES
 // ==========================================
