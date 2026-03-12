@@ -2282,6 +2282,52 @@ router.post('/conversations/:id/transfer-connection', authenticate, async (req, 
       return res.status(403).json({ error: 'Sem acesso à conexão de destino' });
     }
 
+    const conversation = check.rows[0];
+    const contactPhone = conversation.contact_phone;
+    const contactName = conversation.contact_name;
+
+    // Auto-create contact in target connection if not exists
+    if (contactPhone) {
+      try {
+        // Find a contact list linked to the target connection
+        let targetList = await query(
+          `SELECT cl.id FROM contact_lists cl WHERE cl.connection_id = $1 LIMIT 1`,
+          [targetConnectionId]
+        );
+
+        // If no list exists for target connection, create one
+        if (targetList.rows.length === 0) {
+          const targetConnName = await query(`SELECT name FROM connections WHERE id = $1`, [targetConnectionId]);
+          const listName = `Contatos - ${targetConnName.rows[0]?.name || 'Conexão'}`;
+          targetList = await query(
+            `INSERT INTO contact_lists (name, user_id, connection_id) VALUES ($1, $2, $3) RETURNING id`,
+            [listName, req.userId, targetConnectionId]
+          );
+        }
+
+        const listId = targetList.rows[0].id;
+
+        // Check if contact already exists in any list of this connection
+        const existingContact = await query(
+          `SELECT c.id FROM contacts c
+           JOIN contact_lists cl ON cl.id = c.list_id
+           WHERE cl.connection_id = $1 AND c.phone = $2 LIMIT 1`,
+          [targetConnectionId, contactPhone]
+        );
+
+        if (existingContact.rows.length === 0) {
+          await query(
+            `INSERT INTO contacts (list_id, name, phone) VALUES ($1, $2, $3)`,
+            [listId, contactName || contactPhone, contactPhone]
+          );
+          console.log(`[transfer-connection] Auto-created contact ${contactPhone} in target connection ${targetConnectionId}`);
+        }
+      } catch (contactErr) {
+        console.error('[transfer-connection] Error auto-creating contact:', contactErr);
+        // Non-fatal: continue with transfer even if contact creation fails
+      }
+    }
+
     // Update conversation connection
     await query(
       `UPDATE conversations SET connection_id = $1, updated_at = NOW() WHERE id = $2`,
