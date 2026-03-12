@@ -264,189 +264,165 @@ export function NewConversationDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {activeConnections.length > 1 && (
-          <div className="space-y-2 mt-4">
-            <Label htmlFor="connection-global">Conexão para esta conversa</Label>
-            <Select value={connectionId} onValueChange={setConnectionId}>
-              <SelectTrigger id="connection-global">
-                <SelectValue placeholder="Escolha a conexão para continuar" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeConnections.map((conn) => (
+        {/* Always show connection selector first */}
+        <div className="space-y-2 mt-4">
+          <Label htmlFor="connection-global">Conexão WhatsApp</Label>
+          <Select value={connectionId} onValueChange={setConnectionId}>
+            <SelectTrigger id="connection-global">
+              <SelectValue placeholder="Escolha a conexão para continuar" />
+            </SelectTrigger>
+            <SelectContent>
+              {activeConnections.length === 0 ? (
+                <SelectItem value="none" disabled>
+                  Nenhuma conexão ativa
+                </SelectItem>
+              ) : (
+                activeConnections.map((conn) => (
                   <SelectItem key={conn.id} value={conn.id}>
-                    {conn.name}
-                    {conn.phone_number ? ` (${conn.phone_number})` : ''}
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      {conn.name}
+                      {conn.phone_number ? ` (${conn.phone_number})` : ''}
+                    </div>
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Show tabs only after connection is selected */}
+        {connectionId ? (
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="agenda" className="flex items-center gap-2">
+                <BookUser className="h-4 w-4" />
+                Buscar na Agenda
+              </TabsTrigger>
+              <TabsTrigger value="manual" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Novo Número
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Agenda Tab */}
+            <TabsContent value="agenda" className="space-y-4 mt-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome ou telefone..."
+                  value={agendaSearch}
+                  onChange={(e) => setAgendaSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
+              <ScrollArea className="h-[250px] border rounded-md">
+                {loadingAgenda ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : agendaContacts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <BookUser className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">
+                      {agendaSearch ? "Nenhum contato encontrado" : "Agenda vazia"}
+                    </p>
+                    <p className="text-xs mt-1">
+                      {agendaSearch ? "Tente outro termo" : "Importe contatos em Atendimento > Contatos"}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="p-2 space-y-1">
+                    {agendaContacts.map((contact) => (
+                      <button
+                        key={contact.id}
+                        onClick={() => handleSelectFromAgenda(contact)}
+                        disabled={creating}
+                        className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left disabled:opacity-50"
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback className="bg-primary/10 text-primary text-sm">
+                            {getInitials(contact.name, contact.phone)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{contact.name || "Sem nome"}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            <span>{contact.phone || "Sem telefone"}</span>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Manual Entry Tab */}
+            <TabsContent value="manual" className="space-y-4 mt-4">
+              {/* Phone number */}
+              <div className="grid gap-2">
+                <Label htmlFor="phone">Número do Telefone *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="phone"
+                    placeholder="11999999999"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    className="pl-9"
+                    autoComplete="off"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Digite apenas números, com DDD. Ex: 11999999999
+                </p>
+              </div>
+
+              {/* Contact name (optional) */}
+              <div className="grid gap-2">
+                <Label htmlFor="name">Nome do Contato (opcional)</Label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="name"
+                    placeholder="Nome do contato"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    className="pl-9"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleCreateManual} disabled={creating || !connectionId || activeConnections.length === 0}>
+                  {creating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    <>
+                      <MessageSquarePlus className="h-4 w-4 mr-2" />
+                      Iniciar Conversa
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </TabsContent>
+          </Tabs>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+            <MessageSquarePlus className="h-8 w-8 mb-2 opacity-50" />
+            <p className="text-sm">Selecione uma conexão acima para continuar</p>
           </div>
         )}
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="agenda" className="flex items-center gap-2">
-              <BookUser className="h-4 w-4" />
-              Buscar na Agenda
-            </TabsTrigger>
-            <TabsTrigger value="manual" className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Novo Número
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Agenda Tab */}
-          <TabsContent value="agenda" className="space-y-4 mt-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome ou telefone..."
-                value={agendaSearch}
-                onChange={(e) => setAgendaSearch(e.target.value)}
-                className="pl-9"
-                disabled={activeConnections.length > 1 && !connectionId}
-              />
-            </div>
-
-            <ScrollArea className="h-[250px] border rounded-md">
-              {activeConnections.length > 1 && !connectionId ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <MessageSquarePlus className="h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">Selecione a conexão para listar a agenda</p>
-                </div>
-              ) : loadingAgenda ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : agendaContacts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <BookUser className="h-8 w-8 mb-2 opacity-50" />
-                  <p className="text-sm">
-                    {agendaSearch ? "Nenhum contato encontrado" : "Agenda vazia"}
-                  </p>
-                  <p className="text-xs mt-1">
-                    {agendaSearch ? "Tente outro termo" : "Importe contatos em Atendimento > Contatos"}
-                  </p>
-                </div>
-              ) : (
-                <div className="p-2 space-y-1">
-                  {agendaContacts.map((contact) => (
-                    <button
-                      key={contact.id}
-                      onClick={() => handleSelectFromAgenda(contact)}
-                      disabled={creating}
-                      className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-accent transition-colors text-left disabled:opacity-50"
-                    >
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {getInitials(contact.name, contact.phone)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{contact.name || "Sem nome"}</p>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <Phone className="h-3 w-3" />
-                          <span>{contact.phone || "Sem telefone"}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                        {contact.connection_name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </ScrollArea>
-          </TabsContent>
-
-          {/* Manual Entry Tab */}
-          <TabsContent value="manual" className="space-y-4 mt-4">
-            {/* Connection selector */}
-            <div className="grid gap-2">
-              <Label htmlFor="connection">Conexão WhatsApp</Label>
-              <Select value={connectionId} onValueChange={setConnectionId}>
-                <SelectTrigger id="connection">
-                  <SelectValue placeholder="Selecione a conexão" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeConnections.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      Nenhuma conexão ativa
-                    </SelectItem>
-                  ) : (
-                    activeConnections.map((conn) => (
-                      <SelectItem key={conn.id} value={conn.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500" />
-                          {conn.name}
-                          {conn.phone_number && (
-                            <span className="text-muted-foreground text-xs">
-                              ({conn.phone_number})
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Phone number */}
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Número do Telefone *</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="phone"
-                  placeholder="11999999999"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  className="pl-9"
-                  autoComplete="off"
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Digite apenas números, com DDD. Ex: 11999999999
-              </p>
-            </div>
-
-            {/* Contact name (optional) */}
-            <div className="grid gap-2">
-              <Label htmlFor="name">Nome do Contato (opcional)</Label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="name"
-                  placeholder="Nome do contato"
-                  value={contactName}
-                  onChange={(e) => setContactName(e.target.value)}
-                  className="pl-9"
-                  autoComplete="off"
-                />
-              </div>
-            </div>
-
-            <DialogFooter className="pt-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateManual} disabled={creating || !connectionId || activeConnections.length === 0}>
-                {creating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Criando...
-                  </>
-                ) : (
-                  <>
-                    <MessageSquarePlus className="h-4 w-4 mr-2" />
-                    Iniciar Conversa
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </TabsContent>
-        </Tabs>
       </DialogContent>
     </Dialog>
   );
