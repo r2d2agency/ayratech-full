@@ -2246,7 +2246,21 @@ function extractMessageContent(payload) {
   let mediaMimetype = null;
   let waMediaKey = null; // For encrypted WhatsApp media
 
-  const msgContent = payload.msgContent || {};
+  let msgContent = payload.msgContent || {};
+
+  // Unwrap nested wrappers (documentWithCaptionMessage, viewOnceMessageV2, etc.)
+  if (msgContent.documentWithCaptionMessage?.message) {
+    console.log('[W-API Extract] Unwrapping documentWithCaptionMessage');
+    msgContent = { ...msgContent, ...msgContent.documentWithCaptionMessage.message };
+  }
+  if (msgContent.viewOnceMessageV2?.message) {
+    console.log('[W-API Extract] Unwrapping viewOnceMessageV2');
+    msgContent = { ...msgContent, ...msgContent.viewOnceMessageV2.message };
+  }
+  if (msgContent.viewOnceMessage?.message) {
+    console.log('[W-API Extract] Unwrapping viewOnceMessage');
+    msgContent = { ...msgContent, ...msgContent.viewOnceMessage.message };
+  }
 
   // Helper to extract mediaKey from various locations
   const extractMediaKey = (obj) => {
