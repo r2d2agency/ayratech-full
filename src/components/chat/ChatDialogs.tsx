@@ -102,7 +102,7 @@ export function TransferDialog({ open, onOpenChange, conversation, team, availab
 
       // Load connections for connection transfer
       setLoadingConnections(true);
-      api<Array<{ id: string; name: string; status: string; phone_number?: string }>>('/api/connections', { auth: true })
+      api<Array<{ id: string; name: string; status: string; phone_number?: string }>>('/api/connections?scope=organization', { auth: true })
         .then(data => {
           const fromApi = (data || []).filter(c => c.id !== conversation?.connection_id);
           const fromProps = (availableConnections || []).filter(c => c.id !== conversation?.connection_id);
