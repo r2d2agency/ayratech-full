@@ -59,7 +59,7 @@ import {
   X as XIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { ChatMessage, Conversation, ConversationTag, TeamMember } from "@/hooks/use-chat";
+import { ChatMessage, Conversation, ConversationTag, TeamMember, Connection } from "@/hooks/use-chat";
 import { useChat } from "@/hooks/use-chat";
 import { useDepartments, Department } from "@/hooks/use-departments";
 import { useUpload } from "@/hooks/use-upload";
@@ -109,6 +109,7 @@ interface ChatAreaProps {
   syncingHistory?: boolean;
   tags: ConversationTag[];
   team: TeamMember[];
+  connections?: Connection[];
   isAdmin?: boolean;
   userRole?: string;
   onSyncHistory?: (days: number) => Promise<void>;
@@ -141,6 +142,7 @@ export function ChatArea({
   syncingHistory,
   tags,
   team,
+  connections = [],
   isAdmin = false,
   userRole,
   onSyncHistory,
@@ -1193,7 +1195,7 @@ export function ChatArea({
 
       {conversation && <StartFlowDialog open={showStartFlowDialog} onClose={() => setShowStartFlowDialog(false)} conversationId={conversation.id} connectionId={conversation.connection_id} onFlowStarted={() => {}} />}
 
-      <TransferDialog open={showTransferDialog} onOpenChange={setShowTransferDialog} conversation={conversation} team={team} onTransfer={onTransfer} />
+      <TransferDialog open={showTransferDialog} onOpenChange={setShowTransferDialog} conversation={conversation} team={team} availableConnections={connections} onTransfer={onTransfer} />
       <DepartmentDialog open={showDepartmentDialog} onOpenChange={setShowDepartmentDialog} conversation={conversation} departments={departments} onSave={handleSaveDepartment} saving={savingDepartment} />
       {onDeleteConversation && <DeleteConversationDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} onDelete={onDeleteConversation} />}
       

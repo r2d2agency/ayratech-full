@@ -40,10 +40,11 @@ interface TransferDialogProps {
   onOpenChange: (open: boolean) => void;
   conversation: Conversation | null;
   team: TeamMember[];
+  availableConnections?: Array<{ id: string; name: string; status?: string; phone_number?: string | null }>;
   onTransfer: (userId: string | null, note?: string) => void;
 }
 
-export function TransferDialog({ open, onOpenChange, conversation, team, onTransfer }: TransferDialogProps) {
+export function TransferDialog({ open, onOpenChange, conversation, team, availableConnections = [], onTransfer }: TransferDialogProps) {
   const [transferTo, setTransferTo] = useState("");
   const [transferNote, setTransferNote] = useState("");
   const [transferMode, setTransferMode] = useState<'human' | 'ai' | 'connection'>('human');
@@ -103,11 +104,15 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
       setLoadingConnections(true);
       api<Array<{ id: string; name: string; status: string; phone_number?: string }>>('/api/connections', { auth: true })
         .then(data => {
-          // Filter out the current connection and only show connected ones
-          const available = (data || []).filter(c => c.id !== conversation?.connection_id);
-          setConnections(available);
+          const fromApi = (data || []).filter(c => c.id !== conversation?.connection_id);
+          const fromProps = (availableConnections || []).filter(c => c.id !== conversation?.connection_id);
+          setConnections(fromApi.length > 0 ? fromApi : fromProps as Array<{ id: string; name: string; status: string; phone_number?: string }>);
         })
-        .catch(err => console.error('[TransferDialog] Erro ao carregar conexões:', err))
+        .catch(err => {
+          console.error('[TransferDialog] Erro ao carregar conexões:', err);
+          const fromProps = (availableConnections || []).filter(c => c.id !== conversation?.connection_id);
+          setConnections(fromProps as Array<{ id: string; name: string; status: string; phone_number?: string }>);
+        })
         .finally(() => setLoadingConnections(false));
     };
 
