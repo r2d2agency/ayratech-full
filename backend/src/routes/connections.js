@@ -22,6 +22,7 @@ async function getUserOrganization(userId) {
 router.get('/', async (req, res) => {
   try {
     const org = await getUserOrganization(req.userId);
+    const { scope } = req.query; // scope=organization returns all org connections
 
     const connQuery = `SELECT c.*, u.name as created_by_name,
        CASE 
@@ -34,21 +35,29 @@ router.get('/', async (req, res) => {
 
     let result;
 
-    // All users only see connections assigned via connection_members
-    const specificResult = await query(
-      `SELECT DISTINCT cm.connection_id FROM connection_members cm WHERE cm.user_id = $1`,
-      [req.userId]
-    );
-    const connIds = specificResult.rows.map(r => r.connection_id);
+    if (scope === 'organization' && org) {
+      // Return all connections in the organization (for transfer dialogs)
+      result = await query(
+        `${connQuery} WHERE c.organization_id = $1 ORDER BY c.created_at DESC`,
+        [org.organization_id]
+      );
+    } else {
+      // Default: only connections assigned via connection_members
+      const specificResult = await query(
+        `SELECT DISTINCT cm.connection_id FROM connection_members cm WHERE cm.user_id = $1`,
+        [req.userId]
+      );
+      const connIds = specificResult.rows.map(r => r.connection_id);
 
-    if (connIds.length === 0) {
-      return res.json([]);
+      if (connIds.length === 0) {
+        return res.json([]);
+      }
+
+      result = await query(
+        `${connQuery} WHERE c.id = ANY($1) ORDER BY c.created_at DESC`,
+        [connIds]
+      );
     }
-
-    result = await query(
-      `${connQuery} WHERE c.id = ANY($1) ORDER BY c.created_at DESC`,
-      [connIds]
-    );
     
     res.json(result.rows);
   } catch (error) {
