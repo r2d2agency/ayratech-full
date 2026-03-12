@@ -142,6 +142,7 @@ export function ChatArea({
   syncingHistory,
   tags,
   team,
+  connections = [],
   isAdmin = false,
   userRole,
   onSyncHistory,
