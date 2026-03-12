@@ -109,6 +109,7 @@ interface ChatAreaProps {
   syncingHistory?: boolean;
   tags: ConversationTag[];
   team: TeamMember[];
+  connections?: Connection[];
   isAdmin?: boolean;
   userRole?: string;
   onSyncHistory?: (days: number) => Promise<void>;
