@@ -2246,20 +2246,41 @@ function extractMessageContent(payload) {
   let mediaMimetype = null;
   let waMediaKey = null; // For encrypted WhatsApp media
 
-  let msgContent = payload.msgContent || {};
+  let msgContent = payload.msgContent || payload.message || {};
 
-  // Unwrap nested wrappers (documentWithCaptionMessage, viewOnceMessageV2, etc.)
-  if (msgContent.documentWithCaptionMessage?.message) {
-    console.log('[W-API Extract] Unwrapping documentWithCaptionMessage');
-    msgContent = { ...msgContent, ...msgContent.documentWithCaptionMessage.message };
+  // Log raw msgContent keys for debugging document issues
+  const rawKeys = Object.keys(msgContent);
+  if (rawKeys.length > 0) {
+    console.log('[W-API Extract] msgContent keys:', rawKeys.join(', '));
   }
-  if (msgContent.viewOnceMessageV2?.message) {
-    console.log('[W-API Extract] Unwrapping viewOnceMessageV2');
-    msgContent = { ...msgContent, ...msgContent.viewOnceMessageV2.message };
+
+  // Unwrap ALL known nested wrappers recursively
+  // WhatsApp/Baileys wraps messages in various containers
+  const unwrappers = [
+    'documentWithCaptionMessage',
+    'viewOnceMessageV2',
+    'viewOnceMessage',
+    'viewOnceMessageV2Extension',
+    'ephemeralMessage',
+    'templateMessage',
+    'buttonsMessage',
+    'listMessage',
+    'editedMessage',
+  ];
+  
+  for (const wrapper of unwrappers) {
+    if (msgContent[wrapper]?.message) {
+      console.log(`[W-API Extract] Unwrapping ${wrapper}`);
+      msgContent = { ...msgContent, ...msgContent[wrapper].message };
+    }
   }
-  if (msgContent.viewOnceMessage?.message) {
-    console.log('[W-API Extract] Unwrapping viewOnceMessage');
-    msgContent = { ...msgContent, ...msgContent.viewOnceMessage.message };
+  
+  // Some wrappers nest deeper (e.g., ephemeralMessage > viewOnceMessageV2 > message)
+  for (const wrapper of unwrappers) {
+    if (msgContent[wrapper]?.message) {
+      console.log(`[W-API Extract] Unwrapping nested ${wrapper} (2nd pass)`);
+      msgContent = { ...msgContent, ...msgContent[wrapper].message };
+    }
   }
 
   // Helper to extract mediaKey from various locations
@@ -2407,6 +2428,47 @@ function extractMessageContent(payload) {
     mediaUrl = payload.sticker || payload.stickerMessage?.url || payload.mediaUrl || payload.url || null;
     content = '[Figurinha]';
     waMediaKey = extractMediaKey(payload.stickerMessage) || extractMediaKey(payload);
+  }
+
+  // FINAL FALLBACK: If we still have no content/media, check for any media indicators
+  // This catches unknown wrapper formats and edge cases
+  if (!content && !mediaUrl && messageType === 'text') {
+    // Check if payload has media indicators we missed
+    const hasMediaIndicator = payload.hasMedia || payload.mediaUrl || payload.url || payload.fileUrl || 
+                               payload.downloadUrl || payload.media || payload.base64 || payload.data;
+    const payloadMime = payload.mimetype || payload.mediaMimetype || payload.mimeType || null;
+    
+    if (hasMediaIndicator || payloadMime) {
+      // Detect type from mimetype
+      const mimeStr = (payloadMime || '').toLowerCase();
+      if (mimeStr.startsWith('image/')) messageType = 'image';
+      else if (mimeStr.startsWith('audio/')) messageType = 'audio';
+      else if (mimeStr.startsWith('video/')) messageType = 'video';
+      else messageType = 'document';
+      
+      mediaUrl = typeof hasMediaIndicator === 'string' ? hasMediaIndicator : null;
+      mediaMimetype = payloadMime;
+      content = payload.fileName || payload.caption || (messageType === 'audio' ? '[Áudio]' : '[Documento]');
+      waMediaKey = extractMediaKey(payload);
+      
+      console.log('[W-API Extract] FALLBACK media detection:', { messageType, mediaMimetype, hasUrl: Boolean(mediaUrl), content });
+    }
+    
+    // Also scan msgContent for any *Message key we might have missed
+    if (!content && !mediaUrl) {
+      const msgKeys = Object.keys(msgContent);
+      const mediaKey = msgKeys.find(k => k.endsWith('Message') && typeof msgContent[k] === 'object' && msgContent[k] !== null);
+      if (mediaKey) {
+        const mediaObj = msgContent[mediaKey];
+        messageType = 'document';
+        mediaMimetype = pickMime(mediaObj) || payloadMime;
+        mediaUrl = pickFirstString(mediaObj, ['url', 'fileUrl', 'mediaUrl', 'link', 'downloadUrl', 'base64', 'data']);
+        content = mediaObj.fileName || mediaObj.caption || `[${mediaKey.replace('Message', '')}]`;
+        waMediaKey = extractMediaKey(mediaObj);
+        
+        console.log(`[W-API Extract] FALLBACK caught unknown message type via key "${mediaKey}":`, { messageType, mediaMimetype, content });
+      }
+    }
   }
 
   return { messageType, content, mediaUrl, mediaMimetype, waMediaKey };
