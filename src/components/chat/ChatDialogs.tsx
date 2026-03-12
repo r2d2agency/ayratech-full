@@ -27,6 +27,7 @@ import {
   Building2,
   Loader2,
   UserPlus,
+  ArrowRightLeft,
 } from "lucide-react";
 import { Conversation, TeamMember } from "@/hooks/use-chat";
 import { Department } from "@/hooks/use-departments";
@@ -45,7 +46,7 @@ interface TransferDialogProps {
 export function TransferDialog({ open, onOpenChange, conversation, team, onTransfer }: TransferDialogProps) {
   const [transferTo, setTransferTo] = useState("");
   const [transferNote, setTransferNote] = useState("");
-  const [transferMode, setTransferMode] = useState<'human' | 'ai'>('human');
+  const [transferMode, setTransferMode] = useState<'human' | 'ai' | 'connection'>('human');
   const [transferAgents, setTransferAgents] = useState<Array<{ id: string; name: string; is_active: boolean }>>([]);
   const [connectionTeam, setConnectionTeam] = useState<TeamMember[]>([]);
   const [transferToAgent, setTransferToAgent] = useState("");
@@ -53,6 +54,11 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [agentsError, setAgentsError] = useState("");
+  // Connection transfer state
+  const [connections, setConnections] = useState<Array<{ id: string; name: string; status: string; phone_number?: string }>>([]);
+  const [transferToConnection, setTransferToConnection] = useState("");
+  const [transferringConnection, setTransferringConnection] = useState(false);
+  const [loadingConnections, setLoadingConnections] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -61,6 +67,7 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
       setTransferMode('human');
       setTransferTo("");
       setTransferToAgent("");
+      setTransferToConnection("");
       setTransferNote("");
       setAgentsError("");
 
@@ -82,7 +89,6 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
       setLoadingAgents(true);
       api<Array<{ id: string; name: string; is_active: boolean }>>('/api/ai-agents', { auth: true })
         .then(data => {
-          console.log('[TransferDialog] Agentes carregados:', data);
           const active = (data || []).filter(a => a.is_active);
           setTransferAgents(active);
           if (active.length === 0) setAgentsError("Nenhum agente IA ativo encontrado");
@@ -92,12 +98,45 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
           setAgentsError(err.message || "Erro ao carregar agentes IA");
         })
         .finally(() => setLoadingAgents(false));
+
+      // Load connections for connection transfer
+      setLoadingConnections(true);
+      api<Array<{ id: string; name: string; status: string; phone_number?: string }>>('/api/connections', { auth: true })
+        .then(data => {
+          // Filter out the current connection and only show connected ones
+          const available = (data || []).filter(c => c.id !== conversation?.connection_id && c.status === 'connected');
+          setConnections(available);
+        })
+        .catch(err => console.error('[TransferDialog] Erro ao carregar conexões:', err))
+        .finally(() => setLoadingConnections(false));
     };
 
     loadDialogData();
   }, [open, conversation?.connection_id, team]);
 
   const handleTransfer = async () => {
+    if (transferMode === 'connection') {
+      if (!transferToConnection || !conversation?.id) return;
+      setTransferringConnection(true);
+      try {
+        await api(`/api/chat/conversations/${conversation.id}/transfer-connection`, {
+          method: 'POST',
+          body: { connection_id: transferToConnection },
+        });
+        toast.success("Conversa transferida para outra conexão!");
+        onOpenChange(false);
+        setTransferToConnection("");
+        setTransferMode('human');
+        // Dispatch refresh event
+        window.dispatchEvent(new CustomEvent('refresh-conversations'));
+      } catch (err: any) {
+        toast.error(err.message || "Erro ao transferir para outra conexão");
+      } finally {
+        setTransferringConnection(false);
+      }
+      return;
+    }
+
     if (transferMode === 'ai') {
       if (!transferToAgent || !conversation?.id) return;
       setTransferringToAI(true);
@@ -131,7 +170,7 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Transferir Atendimento</DialogTitle>
-          <DialogDescription>Transfira para um atendente humano ou para um agente de IA.</DialogDescription>
+          <DialogDescription>Transfira para um atendente, agente IA ou outra conexão.</DialogDescription>
         </DialogHeader>
         <div className="flex gap-1 p-1 bg-muted rounded-lg">
           <Button variant={transferMode === 'human' ? 'default' : 'ghost'} size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => setTransferMode('human')}>
@@ -139,6 +178,9 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
           </Button>
           <Button variant={transferMode === 'ai' ? 'default' : 'ghost'} size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => setTransferMode('ai')}>
             <Bot className="h-3.5 w-3.5" />Agente IA
+          </Button>
+          <Button variant={transferMode === 'connection' ? 'default' : 'ghost'} size="sm" className="flex-1 gap-1.5 text-xs" onClick={() => setTransferMode('connection')}>
+            <ArrowRightLeft className="h-3.5 w-3.5" />Conexão
           </Button>
         </div>
         <div className="space-y-4">
@@ -169,7 +211,7 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
                 </>
               )}
             </>
-          ) : (
+          ) : transferMode === 'ai' ? (
             <>
               {loadingAgents ? (
                 <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
@@ -192,13 +234,46 @@ export function TransferDialog({ open, onOpenChange, conversation, team, onTrans
               )}
               <p className="text-xs text-muted-foreground">O agente de IA assumirá o atendimento e responderá automaticamente ao contato.</p>
             </>
+          ) : (
+            <>
+              {loadingConnections ? (
+                <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Carregando conexões...</span>
+                </div>
+              ) : connections.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-4">Nenhuma outra conexão disponível.</div>
+              ) : (
+                <Select value={transferToConnection} onValueChange={setTransferToConnection}>
+                  <SelectTrigger><SelectValue placeholder="Selecione a conexão de destino" /></SelectTrigger>
+                  <SelectContent>
+                    {connections.map(conn => (
+                      <SelectItem key={conn.id} value={conn.id}>
+                        <div className="flex items-center gap-2">
+                          <ArrowRightLeft className="h-3.5 w-3.5 text-primary" />
+                          {conn.name} {conn.phone_number ? `(${conn.phone_number})` : ''}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <p className="text-xs text-muted-foreground">A conversa será movida para outra conexão WhatsApp. As mensagens futuras serão enviadas pelo novo número.</p>
+            </>
           )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleTransfer} disabled={transferringToAI || (transferMode === 'ai' && !transferToAgent)}>
-            {transferringToAI && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            {transferMode === 'ai' ? 'Transferir para IA' : 'Transferir'}
+          <Button 
+            onClick={handleTransfer} 
+            disabled={
+              transferringToAI || transferringConnection || 
+              (transferMode === 'ai' && !transferToAgent) ||
+              (transferMode === 'connection' && !transferToConnection)
+            }
+          >
+            {(transferringToAI || transferringConnection) && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {transferMode === 'ai' ? 'Transferir para IA' : transferMode === 'connection' ? 'Transferir Conexão' : 'Transferir'}
           </Button>
         </DialogFooter>
       </DialogContent>

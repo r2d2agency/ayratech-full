@@ -374,6 +374,11 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
+    // Nullify connection_id on conversations, contact_lists, and chat_contacts to preserve data
+    await query(`UPDATE conversations SET connection_id = NULL WHERE connection_id = $1`, [id]);
+    await query(`UPDATE contact_lists SET connection_id = NULL WHERE connection_id = $1`, [id]);
+    await query(`UPDATE chat_contacts SET connection_id = NULL WHERE connection_id = $1`, [id]);
+
     await query(`DELETE FROM connections WHERE id = $1`, [id]);
 
     res.json({ success: true });

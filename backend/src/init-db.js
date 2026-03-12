@@ -647,6 +647,54 @@ EXCEPTION
     WHEN duplicate_column THEN null;
 END $$;
 
+-- Allow NULL connection_id on conversations (preserve conversations when connection is deleted)
+DO $$ BEGIN
+    -- Drop old CASCADE constraint and re-add as SET NULL
+    ALTER TABLE conversations ALTER COLUMN connection_id DROP NOT NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+DO $$ BEGIN
+    -- Drop the old unique constraint and create a partial one that allows nulls
+    ALTER TABLE conversations DROP CONSTRAINT IF EXISTS conversations_connection_id_remote_jid_key;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS conversations_connection_id_remote_jid_key 
+    ON conversations (connection_id, remote_jid) WHERE connection_id IS NOT NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+-- Change FK from CASCADE to SET NULL for conversations.connection_id
+DO $$ BEGIN
+    ALTER TABLE conversations DROP CONSTRAINT IF EXISTS conversations_connection_id_fkey;
+    ALTER TABLE conversations ADD CONSTRAINT conversations_connection_id_fkey 
+        FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE SET NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+-- Allow NULL connection_id on chat_contacts
+DO $$ BEGIN
+    ALTER TABLE chat_contacts ALTER COLUMN connection_id DROP NOT NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+DO $$ BEGIN
+    ALTER TABLE chat_contacts DROP CONSTRAINT IF EXISTS chat_contacts_connection_id_fkey;
+    ALTER TABLE chat_contacts ADD CONSTRAINT chat_contacts_connection_id_fkey 
+        FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE SET NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
+-- Change contact_lists FK from CASCADE to SET NULL
+DO $$ BEGIN
+    ALTER TABLE contact_lists DROP CONSTRAINT IF EXISTS contact_lists_connection_id_fkey;
+    ALTER TABLE contact_lists ADD CONSTRAINT contact_lists_connection_id_fkey 
+        FOREIGN KEY (connection_id) REFERENCES connections(id) ON DELETE SET NULL;
+EXCEPTION WHEN others THEN null;
+END $$;
+
 -- Conversation Tags
 CREATE TABLE IF NOT EXISTS conversation_tags (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
