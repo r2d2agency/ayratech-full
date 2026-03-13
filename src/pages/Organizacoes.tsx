@@ -1444,6 +1444,26 @@ export default function Organizacoes() {
                           )}
                         </div>
 
+                        {/* Shared Conversations */}
+                        <div className="flex items-center justify-between rounded-lg border border-primary/30 bg-primary/5 p-4">
+                          <div className="flex items-center gap-4">
+                            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Users className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Conversas Compartilhadas</p>
+                              <p className="text-sm text-muted-foreground">
+                                Todos os usuários vinculados a uma conexão podem ver todas as conversas dessa conexão
+                              </p>
+                            </div>
+                          </div>
+                          <Switch
+                            checked={modulesEnabled.shared_conversations}
+                            onCheckedChange={(checked) => setModulesEnabled(prev => ({ ...prev, shared_conversations: checked }))}
+                            disabled={!canManageOrg}
+                          />
+                        </div>
+
                         {/* Save Button */}
                         {canManageOrg && (
                           <div className="flex justify-end pt-4">
