@@ -304,19 +304,26 @@ const handleGetQRCode = async (connection: Connection) => {
     }
   };
 
-  const handleMigrateConversations = async (connection: Connection) => {
+  const handleMigrateConversations = async (connection: Connection, sourceId?: string) => {
+    setMigrating(true);
     try {
-      const result = await api<{ migrated: number }>(`/api/connections/${connection.id}/migrate-conversations`, {
+      const url = sourceId 
+        ? `/api/connections/${connection.id}/migrate-conversations?from=${sourceId}`
+        : `/api/connections/${connection.id}/migrate-conversations`;
+      const result = await api<{ migrated: number }>(url, {
         method: 'POST',
         auth: true,
       });
       if (result.migrated > 0) {
-        toast.success(`${result.migrated} conversas recuperadas com sucesso!`);
+        toast.success(`${result.migrated} conversas migradas com sucesso!`);
+        setMigrateDialogOpen(false);
       } else {
-        toast.info('Nenhuma conversa órfã encontrada para recuperar.');
+        toast.info('Nenhuma conversa encontrada para migrar.');
       }
     } catch {
-      toast.error('Erro ao recuperar conversas');
+      toast.error('Erro ao migrar conversas');
+    } finally {
+      setMigrating(false);
     }
   };
 
