@@ -69,12 +69,26 @@ router.get('/conversations/attendance-counts', authenticate, async (req, res) =>
       groupFilter = ` AND COALESCE(conv.is_group, false) = false`;
     }
 
+    // Check if org has shared_conversations enabled
+    let sharedConversations = false;
+    if (userOrg) {
+      try {
+        const orgResult = await query(
+          `SELECT modules_enabled FROM organizations WHERE id = $1`,
+          [userOrg.organization_id]
+        );
+        if (orgResult.rows[0]?.modules_enabled?.shared_conversations) {
+          sharedConversations = true;
+        }
+      } catch {}
+    }
+
     // Build visibility filter based on user role
     let visibilityFilter = '';
     const params = [connectionIds];
     let paramIndex = 2;
 
-    if (!isAdminOrSupervisor && !isSupervisorInAnyDept) {
+    if (!sharedConversations && !isAdminOrSupervisor && !isSupervisorInAnyDept) {
       if (userDepartmentIds.length > 0) {
         visibilityFilter = ` AND (
           conv.assigned_to = $${paramIndex}
@@ -543,14 +557,29 @@ router.get('/conversations', authenticate, async (req, res) => {
       // ========================================
       // DEPARTMENT-BASED VISIBILITY FILTER
       // ========================================
+      // Check if org has shared_conversations enabled
+      let sharedConversations = false;
+      if (userOrg) {
+        try {
+          const orgResult = await query(
+            `SELECT modules_enabled FROM organizations WHERE id = $1`,
+            [userOrg.organization_id]
+          );
+          if (orgResult.rows[0]?.modules_enabled?.shared_conversations) {
+            sharedConversations = true;
+          }
+        } catch {}
+      }
+
       // Logic:
-      // 1. If assigned_to = current user -> can see (my conversation)
-      // 2. If department_id is in user's departments -> can see
-      // 3. If department_id IS NULL AND attendance_status = 'waiting' -> can see (general queue)
-      // 4. If department_id IS NULL AND attendance_status != 'waiting' -> only admin/supervisor can see
-      // 5. Admin/Supervisor/Owner can see everything
+      // 1. If shared_conversations is enabled -> all connection members see everything
+      // 2. If assigned_to = current user -> can see (my conversation)
+      // 3. If department_id is in user's departments -> can see
+      // 4. If department_id IS NULL AND attendance_status = 'waiting' -> can see (general queue)
+      // 5. If department_id IS NULL AND attendance_status != 'waiting' -> only admin/supervisor can see
+      // 6. Admin/Supervisor/Owner can see everything
       
-      if (supportsDepartment && !isAdminOrSupervisor && !isSupervisorInAnyDept) {
+      if (supportsDepartment && !sharedConversations && !isAdminOrSupervisor && !isSupervisorInAnyDept) {
         // Non-admin users: apply visibility restrictions
         if (userDepartmentIds.length > 0) {
           // User has departments: can see their department conversations + assigned to them + waiting without department
