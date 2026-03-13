@@ -1236,6 +1236,27 @@ export function ChatArea({
                    rows={isMobile ? 3 : 1}
                    style={isMobile ? { height: 'auto', minHeight: '80px' } : undefined} />
                 {showMentionSuggestions && <MentionSuggestions query={mentionQuery} team={team} onSelect={handleSelectMember} onClose={closeSuggestions} position={suggestionPosition} />}
+                {slashQuery !== null && slashReplies.length > 0 && (
+                  <div className="absolute bottom-full left-0 right-0 mb-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
+                    <div className="p-1">
+                      <div className="px-2 py-1 text-xs text-muted-foreground font-medium">Respostas rápidas</div>
+                      {slashReplies.map((reply, idx) => (
+                        <button
+                          key={reply.id}
+                          className={cn(
+                            "w-full text-left px-3 py-2 rounded-md text-sm flex flex-col gap-0.5 transition-colors",
+                            idx === slashSelectedIndex ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                          )}
+                          onMouseDown={(e) => { e.preventDefault(); handleSlashSelect(reply); }}
+                          onMouseEnter={() => setSlashSelectedIndex(idx)}
+                        >
+                          <span className="font-medium">/{reply.shortcut || reply.title}</span>
+                          <span className="text-xs text-muted-foreground line-clamp-1">{reply.content}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               {messageText.trim() ? (
                 <Button size="icon" className="h-10 w-10 flex-shrink-0" onClick={handleSend} disabled={!messageText.trim() || sending}>
