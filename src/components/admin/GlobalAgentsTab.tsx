@@ -552,6 +552,27 @@ export function GlobalAgentsTab() {
     } catch { toast.error('Erro ao remover'); }
   };
 
+  // Stats functions
+  const handleOpenStats = async (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setStatsDialogOpen(true);
+    setStatsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/global-agents/admin/${agentId}/stats?days=${statsDays}`, { headers: headers() });
+      if (res.ok) setStatsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setStatsLoading(false); }
+  };
+
+  const loadStats = async (agentId: string, days: number) => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/global-agents/admin/${agentId}/stats?days=${days}`, { headers: headers() });
+      if (res.ok) setStatsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setStatsLoading(false); }
+  };
+
   // Test chat functions
   const handleOpenTest = (agent: GlobalAgent) => {
     setSelectedAgentId(agent.id);
