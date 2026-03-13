@@ -447,7 +447,52 @@ export function ChatArea({
     catch { setMessageText(messageText.trim()); }
   };
 
+  // Slash command: detect /shortcut and load quick replies
+  const slashCacheRef = useRef<QuickReply[]>([]);
+  
+  useEffect(() => {
+    if (messageText.startsWith('/') && messageText.length >= 1) {
+      const query = messageText.slice(1).toLowerCase();
+      setSlashQuery(query);
+      
+      const loadAndFilter = async () => {
+        if (slashCacheRef.current.length === 0) {
+          try {
+            const all = await fetchQuickRepliesForSlash();
+            slashCacheRef.current = all;
+          } catch { slashCacheRef.current = []; }
+        }
+        const filtered = slashCacheRef.current.filter(r => {
+          const shortcut = (r.shortcut || '').toLowerCase();
+          const title = (r.title || '').toLowerCase();
+          return !query || shortcut.includes(query) || title.includes(query);
+        }).slice(0, 8);
+        setSlashReplies(filtered);
+        setSlashSelectedIndex(0);
+      };
+      loadAndFilter();
+    } else {
+      setSlashQuery(null);
+      setSlashReplies([]);
+    }
+  }, [messageText, fetchQuickRepliesForSlash]);
+
+  const handleSlashSelect = useCallback((reply: QuickReply) => {
+    const contactName = conversation?.contact_name || '';
+    setMessageText(reply.content.replace(/\{nome\}/gi, contactName));
+    setSlashQuery(null);
+    setSlashReplies([]);
+    textareaRef.current?.focus();
+  }, [conversation?.contact_name]);
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    // Handle slash suggestions navigation
+    if (slashQuery !== null && slashReplies.length > 0) {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setSlashSelectedIndex(i => (i + 1) % slashReplies.length); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); setSlashSelectedIndex(i => (i - 1 + slashReplies.length) % slashReplies.length); return; }
+      if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); handleSlashSelect(slashReplies[slashSelectedIndex]); return; }
+      if (e.key === 'Escape') { e.preventDefault(); setSlashQuery(null); setSlashReplies([]); return; }
+    }
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
