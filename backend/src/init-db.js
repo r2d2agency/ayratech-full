@@ -3303,7 +3303,66 @@ CREATE INDEX IF NOT EXISTS idx_push_log_user ON push_notification_log(user_id);
 CREATE INDEX IF NOT EXISTS idx_push_log_created ON push_notification_log(created_at DESC);
 `;
 
-// Migration steps in order of execution
+
+// ============================================
+// STEP 39: GLOBAL AI AGENTS
+// ============================================
+const step39GlobalAgents = `
+CREATE TABLE IF NOT EXISTS global_ai_agents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(100) NOT NULL,
+  description TEXT,
+  avatar_url TEXT,
+  ai_provider VARCHAR(20) NOT NULL DEFAULT 'openai',
+  ai_model VARCHAR(100) NOT NULL DEFAULT 'gpt-4o-mini',
+  ai_api_key TEXT,
+  system_prompt TEXT NOT NULL DEFAULT 'Você é um assistente virtual profissional.',
+  temperature NUMERIC(3,2) DEFAULT 0.7,
+  max_tokens INTEGER DEFAULT 1000,
+  context_window INTEGER DEFAULT 20,
+  custom_fields JSONB DEFAULT '[]'::jsonb,
+  capabilities TEXT[] DEFAULT ARRAY['respond_messages']::TEXT[],
+  handoff_message TEXT DEFAULT 'Vou transferir você para um atendente humano. Aguarde um momento.',
+  handoff_keywords TEXT[] DEFAULT ARRAY['humano', 'atendente', 'pessoa']::TEXT[],
+  greeting_message TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS global_agent_org_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  global_agent_id UUID NOT NULL REFERENCES global_ai_agents(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  assigned_at TIMESTAMPTZ DEFAULT NOW(),
+  assigned_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  UNIQUE(global_agent_id, organization_id)
+);
+
+CREATE TABLE IF NOT EXISTS global_agent_activations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  global_agent_id UUID NOT NULL REFERENCES global_ai_agents(id) ON DELETE CASCADE,
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  connection_id UUID NOT NULL REFERENCES connections(id) ON DELETE CASCADE,
+  is_active BOOLEAN DEFAULT true,
+  custom_field_values JSONB DEFAULT '{}'::jsonb,
+  prompt_additions TEXT,
+  schedule_windows JSONB DEFAULT '[]'::jsonb,
+  schedule_mode VARCHAR(20) DEFAULT 'manual',
+  activated_by UUID REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(global_agent_id, connection_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_global_agent_org_assignments_org ON global_agent_org_assignments(organization_id);
+CREATE INDEX IF NOT EXISTS idx_global_agent_org_assignments_agent ON global_agent_org_assignments(global_agent_id);
+CREATE INDEX IF NOT EXISTS idx_global_agent_activations_org ON global_agent_activations(organization_id);
+CREATE INDEX IF NOT EXISTS idx_global_agent_activations_conn ON global_agent_activations(connection_id);
+CREATE INDEX IF NOT EXISTS idx_global_agent_activations_active ON global_agent_activations(is_active) WHERE is_active = true;
+`;
+
 const migrationSteps = [
   { name: 'Enums', sql: step1Enums, critical: true },
   { name: 'Core Tables (users, plans)', sql: step2CoreTables, critical: true },
@@ -3344,6 +3403,7 @@ const migrationSteps = [
   { name: 'Projects Module', sql: step36Projects, critical: false },
   { name: 'Permission Templates', sql: step37PermissionTemplates, critical: false },
   { name: 'Push Notifications', sql: step38PushNotifications, critical: false },
+  { name: 'Global AI Agents', sql: step39GlobalAgents, critical: false },
 ];
 
 export async function initDatabase() {
