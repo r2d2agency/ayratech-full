@@ -475,7 +475,8 @@ export default function AgentesIACliente() {
                       <SelectContent>
                         {connections.map(conn => (
                           <SelectItem key={conn.id} value={conn.id}>
-                            {conn.name} {conn.phone ? `(${conn.phone})` : ''}
+                            {conn.name} {conn.phone_number ? `(${conn.phone_number})` : ''} 
+                            {conn.status !== 'connected' ? ' ⚠️' : ' ✅'}
                           </SelectItem>
                         ))}
                       </SelectContent>
