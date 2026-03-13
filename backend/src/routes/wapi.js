@@ -2106,6 +2106,44 @@ async function handleOutgoingMessage(connection, payload) {
       var conversationId = convResult.rows[0].id;
     }
 
+    // Handle protocolMessage (edits/deletes) for outgoing
+    const outMsgContent = payload.msgContent || payload.message || {};
+    if (outMsgContent.protocolMessage) {
+      const proto = outMsgContent.protocolMessage;
+      const editedMsg = proto.editedMessage;
+      const protoType = proto.type;
+      
+      if (editedMsg) {
+        const editedMessageId = proto.key?.id;
+        if (editedMessageId) {
+          const newContent = editedMsg?.message?.conversation 
+            || editedMsg?.message?.extendedTextMessage?.text 
+            || editedMsg?.conversation
+            || editedMsg?.extendedTextMessage?.text
+            || '';
+          if (newContent) {
+            await query(
+              `UPDATE chat_messages SET content = $1, is_edited = true WHERE message_id = $2 RETURNING id`,
+              [newContent, editedMessageId]
+            );
+          }
+        }
+        return;
+      }
+      
+      if (protoType === 0 || protoType === 'REVOKE' || proto.key?.id) {
+        const deletedMessageId = proto.key?.id;
+        if (deletedMessageId) {
+          await query(
+            `UPDATE chat_messages SET is_deleted = true WHERE message_id = $1 RETURNING id`,
+            [deletedMessageId]
+          );
+        }
+        return;
+      }
+      return;
+    }
+
     const { messageType, content, mediaUrl: rawMediaUrl, mediaMimetype, waMediaKey } = extractMessageContent(payload);
     let effectiveMediaUrl = normalizeUploadsUrl(rawMediaUrl);
     let effectiveMediaMimetype = mediaMimetype || null;
