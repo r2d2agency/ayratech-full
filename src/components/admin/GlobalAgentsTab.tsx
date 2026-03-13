@@ -264,6 +264,12 @@ export function GlobalAgentsTab() {
   const [testInput, setTestInput] = useState('');
   const [testLoading, setTestLoading] = useState(false);
 
+  // Stats state
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [statsDays, setStatsDays] = useState(30);
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
