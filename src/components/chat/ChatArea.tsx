@@ -182,6 +182,10 @@ export function ChatArea({
     return saved === 'true';
   });
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [slashQuery, setSlashQuery] = useState<string | null>(null);
+  const [slashReplies, setSlashReplies] = useState<QuickReply[]>([]);
+  const [slashSelectedIndex, setSlashSelectedIndex] = useState(0);
+  const { getQuickReplies: fetchQuickRepliesForSlash } = useQuickReplies();
   const [showNotes, setShowNotes] = useState(false);
   const [notesCount, setNotesCount] = useState(0);
   const [replyingTo, setReplyingTo] = useState<ChatMessage | null>(null);
