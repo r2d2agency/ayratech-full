@@ -40,8 +40,9 @@ const CAPABILITY_ICONS: Record<string, { icon: typeof Bot; label: string }> = {
 interface Connection {
   id: string;
   name: string;
-  phone: string;
+  phone_number?: string;
   status: string;
+  provider?: string;
 }
 
 interface TestMessage {
@@ -91,7 +92,7 @@ export default function AgentesIACliente() {
   const loadData = async () => {
     const [agentsData, connsData, modelsData] = await Promise.all([
       getAvailableAgents(),
-      api<Connection[]>('/api/connections', { auth: true }).catch(() => []),
+      api<Connection[]>('/api/connections?scope=organization', { auth: true }).catch(() => []),
       getAIModels(),
     ]);
     setAgents(agentsData);
@@ -200,7 +201,7 @@ export default function AgentesIACliente() {
 
   const getConnectionName = (connId: string) => {
     const conn = connections.find(c => c.id === connId);
-    return conn ? `${conn.name} (${conn.phone || ''})` : connId;
+    return conn ? `${conn.name} (${conn.phone_number || ''})` : connId;
   };
 
   const getScheduleLabel = (mode: string, windows: ScheduleWindow[]) => {
@@ -474,7 +475,8 @@ export default function AgentesIACliente() {
                       <SelectContent>
                         {connections.map(conn => (
                           <SelectItem key={conn.id} value={conn.id}>
-                            {conn.name} {conn.phone ? `(${conn.phone})` : ''}
+                            {conn.name} {conn.phone_number ? `(${conn.phone_number})` : ''} 
+                            {conn.status !== 'connected' ? ' ⚠️' : ' ✅'}
                           </SelectItem>
                         ))}
                       </SelectContent>
