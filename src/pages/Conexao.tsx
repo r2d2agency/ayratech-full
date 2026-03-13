@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { LeadDistributionDialog } from "@/components/conexao/LeadDistributionDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Connection {
   id: string;
@@ -38,6 +39,7 @@ interface PlanLimits {
 }
 
 const Conexao = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
