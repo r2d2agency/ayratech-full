@@ -493,7 +493,8 @@ router.get('/available', async (req, res) => {
 
     const result = await query(`
       SELECT ga.id, ga.name, ga.description, ga.avatar_url, ga.custom_fields, ga.is_active,
-        ga.system_prompt, ga.greeting_message,
+        ga.system_prompt, ga.greeting_message, ga.ai_provider, ga.ai_model, ga.capabilities,
+        ga.has_knowledge_base,
         act.id as activation_id, act.is_active as activation_active, 
         act.schedule_mode, act.schedule_windows, act.custom_field_values,
         act.prompt_additions, act.connection_id, act.client_ai_api_key
