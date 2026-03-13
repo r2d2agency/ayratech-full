@@ -102,6 +102,12 @@ const Conexao = () => {
   const [leadDistributionDialogOpen, setLeadDistributionDialogOpen] = useState(false);
   const [leadDistributionConnection, setLeadDistributionConnection] = useState<Connection | null>(null);
 
+  // Migration dialog state
+  const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
+  const [migrateTargetConnection, setMigrateTargetConnection] = useState<Connection | null>(null);
+  const [migrateSourceId, setMigrateSourceId] = useState<string>("");
+  const [migrating, setMigrating] = useState(false);
+
   useEffect(() => {
     if (authLoading) return;
 
@@ -298,19 +304,26 @@ const handleGetQRCode = async (connection: Connection) => {
     }
   };
 
-  const handleMigrateConversations = async (connection: Connection) => {
+  const handleMigrateConversations = async (connection: Connection, sourceId?: string) => {
+    setMigrating(true);
     try {
-      const result = await api<{ migrated: number }>(`/api/connections/${connection.id}/migrate-conversations`, {
+      const url = sourceId 
+        ? `/api/connections/${connection.id}/migrate-conversations?from=${sourceId}`
+        : `/api/connections/${connection.id}/migrate-conversations`;
+      const result = await api<{ migrated: number }>(url, {
         method: 'POST',
         auth: true,
       });
       if (result.migrated > 0) {
-        toast.success(`${result.migrated} conversas recuperadas com sucesso!`);
+        toast.success(`${result.migrated} conversas migradas com sucesso!`);
+        setMigrateDialogOpen(false);
       } else {
-        toast.info('Nenhuma conversa órfã encontrada para recuperar.');
+        toast.info('Nenhuma conversa encontrada para migrar.');
       }
     } catch {
-      toast.error('Erro ao recuperar conversas');
+      toast.error('Erro ao migrar conversas');
+    } finally {
+      setMigrating(false);
     }
   };
 
@@ -1136,12 +1149,16 @@ const handleGetQRCode = async (connection: Connection) => {
                       <Pencil className="h-4 w-4" />
                     </Button>
                     
-                    {/* Recover orphaned conversations */}
+                    {/* Migrate conversations from another connection */}
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleMigrateConversations(connection)}
-                      title="Recuperar conversas de conexão anterior"
+                      onClick={() => {
+                        setMigrateTargetConnection(connection);
+                        setMigrateSourceId("");
+                        setMigrateDialogOpen(true);
+                      }}
+                      title="Migrar conversas de outra conexão"
                     >
                       <History className="h-4 w-4 text-primary" />
                     </Button>
@@ -1561,6 +1578,66 @@ const handleGetQRCode = async (connection: Connection) => {
           onOpenChange={setLeadDistributionDialogOpen}
           connection={leadDistributionConnection}
         />
+
+        {/* Migrate Conversations Dialog */}
+        <Dialog open={migrateDialogOpen} onOpenChange={setMigrateDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Migrar Conversas</DialogTitle>
+              <DialogDescription>
+                Transfira todas as conversas de outra conexão (ou conversas órfãs) para <strong>{migrateTargetConnection?.name}</strong>.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Origem das conversas</Label>
+                <Select value={migrateSourceId} onValueChange={setMigrateSourceId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a origem..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="orphaned">🔄 Conversas órfãs (conexão excluída)</SelectItem>
+                    {connections
+                      .filter(c => c.id !== migrateTargetConnection?.id)
+                      .map(c => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name} {c.phone_number ? `(${c.phone_number})` : ''} {c.status === 'connected' ? '🟢' : '🔴'}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                ⚠️ Todas as conversas da origem selecionada serão movidas para esta conexão. O histórico de mensagens será preservado.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setMigrateDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={() => {
+                  if (migrateTargetConnection) {
+                    handleMigrateConversations(
+                      migrateTargetConnection, 
+                      migrateSourceId === 'orphaned' ? undefined : migrateSourceId
+                    );
+                  }
+                }}
+                disabled={!migrateSourceId || migrating}
+              >
+                {migrating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Migrando...
+                  </>
+                ) : (
+                  'Migrar Conversas'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
