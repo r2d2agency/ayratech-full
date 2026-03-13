@@ -201,7 +201,7 @@ export default function AgentesIACliente() {
 
   const getConnectionName = (connId: string) => {
     const conn = connections.find(c => c.id === connId);
-    return conn ? `${conn.name} (${conn.phone || ''})` : connId;
+    return conn ? `${conn.name} (${conn.phone_number || ''})` : connId;
   };
 
   const getScheduleLabel = (mode: string, windows: ScheduleWindow[]) => {
