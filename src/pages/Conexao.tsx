@@ -18,6 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { LeadDistributionDialog } from "@/components/conexao/LeadDistributionDialog";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Connection {
   id: string;
@@ -38,6 +39,7 @@ interface PlanLimits {
 }
 
 const Conexao = () => {
+  const { user, isLoading: authLoading } = useAuth();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -101,14 +103,35 @@ const Conexao = () => {
   const [leadDistributionConnection, setLeadDistributionConnection] = useState<Connection | null>(null);
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!user) {
+      setConnections([]);
+      setLoading(false);
+      return;
+    }
+
     loadConnections();
     loadPlanLimits();
-  }, []);
+  }, [authLoading, user?.id, user?.organization_id]);
 
   const loadConnections = async () => {
+    setLoading(true);
     try {
-      const data = await api<Connection[]>('/api/connections');
-      setConnections(data);
+      const [orgScopedConnections, assignedConnections, orgDirectConnections] = await Promise.all([
+        api<Connection[]>('/api/connections?scope=organization').catch(() => []),
+        api<Connection[]>('/api/connections').catch(() => []),
+        user?.organization_id
+          ? api<Connection[]>(`/api/organizations/${user.organization_id}/connections`).catch(() => [])
+          : Promise.resolve([] as Connection[]),
+      ]);
+
+      const mergedConnections = new Map<string, Connection>();
+      [...orgScopedConnections, ...assignedConnections, ...orgDirectConnections].forEach((conn) => {
+        mergedConnections.set(conn.id, conn);
+      });
+
+      setConnections(Array.from(mergedConnections.values()));
     } catch (error) {
       console.error('Error loading connections:', error);
       toast.error('Erro ao carregar conexões');
