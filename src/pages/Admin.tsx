@@ -1731,6 +1731,38 @@ export default function Admin() {
             </Card>
           </TabsContent>
 
+          {/* Change Password Dialog */}
+          <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Alterar Senha</DialogTitle>
+                <DialogDescription>
+                  Alterar a senha do usuário <strong>{changePasswordUser?.email}</strong>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nova Senha *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={changePasswordValue}
+                    onChange={(e) => setChangePasswordValue(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setChangePasswordDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleChangePassword} disabled={actionLoading}>
+                  {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Salvar Senha
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           {/* W-API Instances Tab */}
           <TabsContent value="wapi-instances" className="space-y-4">
             <WapiInstancesTab />
