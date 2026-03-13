@@ -584,6 +584,7 @@ export function useSuperadmin() {
     getAllUsers,
     setSuperadmin,
     deleteUser,
+    changeUserPassword,
     searchUserByEmail,
     deleteUserByEmail,
     // Organizations
