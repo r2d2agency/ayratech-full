@@ -13,8 +13,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { API_URL, getAuthToken } from '@/lib/api';
 import { toast } from 'sonner';
-import { Bot, Plus, Trash2, Loader2, Pencil, Building2, X, Brain, MessageSquare, Send, Sparkles, FileText, BookOpen, Shield, Clock, Headphones, Target, Upload } from 'lucide-react';
+import { Bot, Plus, Trash2, Loader2, Pencil, Building2, X, Brain, MessageSquare, Send, Sparkles, FileText, BookOpen, Shield, Clock, Headphones, Target, Upload, BarChart3, Mic, Image, Eye, Users, Zap, ArrowRightLeft } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 
 interface GlobalAgent {
   id: string;
@@ -262,6 +263,12 @@ export function GlobalAgentsTab() {
   const [testMessages, setTestMessages] = useState<TestMessage[]>([]);
   const [testInput, setTestInput] = useState('');
   const [testLoading, setTestLoading] = useState(false);
+
+  // Stats state
+  const [statsDialogOpen, setStatsDialogOpen] = useState(false);
+  const [statsLoading, setStatsLoading] = useState(false);
+  const [statsData, setStatsData] = useState<any>(null);
+  const [statsDays, setStatsDays] = useState(30);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -545,6 +552,27 @@ export function GlobalAgentsTab() {
     } catch { toast.error('Erro ao remover'); }
   };
 
+  // Stats functions
+  const handleOpenStats = async (agentId: string) => {
+    setSelectedAgentId(agentId);
+    setStatsDialogOpen(true);
+    setStatsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/global-agents/admin/${agentId}/stats?days=${statsDays}`, { headers: headers() });
+      if (res.ok) setStatsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setStatsLoading(false); }
+  };
+
+  const loadStats = async (agentId: string, days: number) => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/global-agents/admin/${agentId}/stats?days=${days}`, { headers: headers() });
+      if (res.ok) setStatsData(await res.json());
+    } catch { /* ignore */ }
+    finally { setStatsLoading(false); }
+  };
+
   // Test chat functions
   const handleOpenTest = (agent: GlobalAgent) => {
     setSelectedAgentId(agent.id);
@@ -632,16 +660,19 @@ export function GlobalAgentsTab() {
                     </Badge>
                   )}
                 </div>
+                {/* Capability icons */}
                 {agent.capabilities && agent.capabilities.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {agent.capabilities.slice(0, 4).map(cap => (
-                      <Badge key={cap} variant="outline" className="text-[10px] h-4">
-                        {ALL_CAPABILITIES.find(c => c.id === cap)?.label || cap}
-                      </Badge>
-                    ))}
-                    {agent.capabilities.length > 4 && (
-                      <Badge variant="outline" className="text-[10px] h-4">+{agent.capabilities.length - 4}</Badge>
-                    )}
+                  <div className="flex items-center gap-1.5">
+                    {agent.capabilities.map(cap => {
+                      const capInfo = ALL_CAPABILITIES.find(c => c.id === cap);
+                      if (!capInfo) return null;
+                      const Icon = capInfo.icon;
+                      return (
+                        <div key={cap} className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center" title={capInfo.label}>
+                          <Icon className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
                 <div className="flex items-center gap-4 text-xs">
@@ -660,6 +691,9 @@ export function GlobalAgentsTab() {
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => handleOpenKnowledge(agent)}>
                     <Brain className="h-3.5 w-3.5 mr-1" /> Cérebro
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => handleOpenStats(agent.id)}>
+                    <BarChart3 className="h-3.5 w-3.5 mr-1" /> Stats
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => handleOpenTest(agent)}>
                     <MessageSquare className="h-3.5 w-3.5 mr-1" /> Testar
@@ -1065,6 +1099,145 @@ export function GlobalAgentsTab() {
               Salvar ({assignedOrgIds.length} selecionadas)
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Stats Dialog */}
+      <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" /> Estatísticas do Agente
+            </DialogTitle>
+            <DialogDescription>Métricas de utilização, tokens e atendimentos</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mb-2">
+            {[7, 15, 30, 90].map(d => (
+              <Button
+                key={d}
+                size="sm"
+                variant={statsDays === d ? 'default' : 'outline'}
+                onClick={() => {
+                  setStatsDays(d);
+                  if (selectedAgentId) loadStats(selectedAgentId, d);
+                }}
+              >
+                {d}d
+              </Button>
+            ))}
+          </div>
+          <ScrollArea className="flex-1 min-h-0 max-h-[65vh]">
+            {statsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : !statsData ? (
+              <div className="text-center py-12 text-muted-foreground">Sem dados disponíveis</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_sessions || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Atendimentos</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_messages || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><MessageSquare className="h-3 w-3" /> Mensagens</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_tokens || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> Tokens</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.handoff_count || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><ArrowRightLeft className="h-3 w-3" /> Handoffs</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Daily Chart */}
+                {statsData.daily && statsData.daily.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Atendimentos e Tokens por Dia</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={statsData.daily.map((d: any) => ({
+                          ...d,
+                          date: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                          tokens: Number(d.tokens),
+                          sessions: Number(d.sessions),
+                          messages: Number(d.messages),
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 10 }} />
+                          <YAxis yAxisId="left" className="text-xs" tick={{ fontSize: 10 }} />
+                          <YAxis yAxisId="right" orientation="right" className="text-xs" tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar yAxisId="left" dataKey="sessions" name="Atendimentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar yAxisId="right" dataKey="tokens" name="Tokens" fill="hsl(var(--primary) / 0.4)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Per-org breakdown */}
+                {statsData.perOrg && statsData.perOrg.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Uso por Organização</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Organização</TableHead>
+                            <TableHead className="text-right">Sessões</TableHead>
+                            <TableHead className="text-right">Tokens</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statsData.perOrg.map((org: any) => (
+                            <TableRow key={org.organization_id}>
+                              <TableCell className="font-medium">{org.org_name}</TableCell>
+                              <TableCell className="text-right">{Number(org.sessions || 0).toLocaleString()}</TableCell>
+                              <TableCell className="text-right">{Number(org.tokens || 0).toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Extra info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm font-medium">Contatos Únicos</p>
+                      <p className="text-xl font-bold mt-1">{Number(statsData.totals?.unique_contacts || 0).toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm font-medium">Tokens de Prompt</p>
+                      <p className="text-xl font-bold mt-1">{Number(statsData.totals?.total_prompt_tokens || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Completion: {Number(statsData.totals?.total_completion_tokens || 0).toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </TabsContent>
