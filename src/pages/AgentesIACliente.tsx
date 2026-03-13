@@ -83,7 +83,7 @@ export default function AgentesIACliente() {
   const [voiceGender, setVoiceGender] = useState<'female' | 'male'>('female');
   const [selectedModel, setSelectedModel] = useState('');
   const [saving, setSaving] = useState(false);
-
+  const [showTestSettings, setShowTestSettings] = useState(false);
   // Test chat state
   const [testDialogOpen, setTestDialogOpen] = useState(false);
   const [testAgentData, setTestAgentData] = useState<GlobalAgentForClient | null>(null);
