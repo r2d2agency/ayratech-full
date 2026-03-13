@@ -1101,6 +1101,145 @@ export function GlobalAgentsTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Stats Dialog */}
+      <Dialog open={statsDialogOpen} onOpenChange={setStatsDialogOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" /> Estatísticas do Agente
+            </DialogTitle>
+            <DialogDescription>Métricas de utilização, tokens e atendimentos</DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mb-2">
+            {[7, 15, 30, 90].map(d => (
+              <Button
+                key={d}
+                size="sm"
+                variant={statsDays === d ? 'default' : 'outline'}
+                onClick={() => {
+                  setStatsDays(d);
+                  if (selectedAgentId) loadStats(selectedAgentId, d);
+                }}
+              >
+                {d}d
+              </Button>
+            ))}
+          </div>
+          <ScrollArea className="flex-1 min-h-0 max-h-[65vh]">
+            {statsLoading ? (
+              <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>
+            ) : !statsData ? (
+              <div className="text-center py-12 text-muted-foreground">Sem dados disponíveis</div>
+            ) : (
+              <div className="space-y-6">
+                {/* Summary Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_sessions || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Users className="h-3 w-3" /> Atendimentos</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_messages || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><MessageSquare className="h-3 w-3" /> Mensagens</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.total_tokens || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><Zap className="h-3 w-3" /> Tokens</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-bold">{Number(statsData.totals?.handoff_count || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground flex items-center justify-center gap-1"><ArrowRightLeft className="h-3 w-3" /> Handoffs</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Daily Chart */}
+                {statsData.daily && statsData.daily.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Atendimentos e Tokens por Dia</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={statsData.daily.map((d: any) => ({
+                          ...d,
+                          date: new Date(d.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+                          tokens: Number(d.tokens),
+                          sessions: Number(d.sessions),
+                          messages: Number(d.messages),
+                        }))}>
+                          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                          <XAxis dataKey="date" className="text-xs" tick={{ fontSize: 10 }} />
+                          <YAxis yAxisId="left" className="text-xs" tick={{ fontSize: 10 }} />
+                          <YAxis yAxisId="right" orientation="right" className="text-xs" tick={{ fontSize: 10 }} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar yAxisId="left" dataKey="sessions" name="Atendimentos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar yAxisId="right" dataKey="tokens" name="Tokens" fill="hsl(var(--primary) / 0.4)" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Per-org breakdown */}
+                {statsData.perOrg && statsData.perOrg.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Uso por Organização</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Organização</TableHead>
+                            <TableHead className="text-right">Sessões</TableHead>
+                            <TableHead className="text-right">Tokens</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {statsData.perOrg.map((org: any) => (
+                            <TableRow key={org.organization_id}>
+                              <TableCell className="font-medium">{org.org_name}</TableCell>
+                              <TableCell className="text-right">{Number(org.sessions || 0).toLocaleString()}</TableCell>
+                              <TableCell className="text-right">{Number(org.tokens || 0).toLocaleString()}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Extra info */}
+                <div className="grid grid-cols-2 gap-3">
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm font-medium">Contatos Únicos</p>
+                      <p className="text-xl font-bold mt-1">{Number(statsData.totals?.unique_contacts || 0).toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <p className="text-sm font-medium">Tokens de Prompt</p>
+                      <p className="text-xl font-bold mt-1">{Number(statsData.totals?.total_prompt_tokens || 0).toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Completion: {Number(statsData.totals?.total_completion_tokens || 0).toLocaleString()}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </TabsContent>
   );
 }
