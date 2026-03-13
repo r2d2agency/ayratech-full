@@ -299,33 +299,48 @@ export default function AgentesIACliente() {
 
     setSaving(true);
     try {
+      const normalizedCustomName = customName.trim();
+      const normalizedSelectedModel = selectedModel?.trim();
+      const customFieldPayload: Record<string, string> = {
+        ...customFieldValues,
+        _voice_tone: voiceTone,
+        _voice_gender: voiceGender,
+      };
+
+      if (normalizedCustomName) customFieldPayload._custom_name = normalizedCustomName;
+      if (normalizedSelectedModel && !normalizedSelectedModel.startsWith('_label_')) {
+        customFieldPayload._selected_model = normalizedSelectedModel;
+      }
+
       const payload: any = {
         schedule_mode: scheduleMode,
         schedule_windows: scheduleWindows,
-        custom_field_values: {
-          ...customFieldValues,
-          _voice_tone: voiceTone,
-          _voice_gender: voiceGender,
-          _custom_name: customName,
-          _selected_model: selectedModel,
-        },
+        custom_field_values: customFieldPayload,
         prompt_additions: promptAdditions,
-        client_ai_api_key: clientAiApiKey,
       };
 
+      const keepingMaskedApiKey = selectedActivation && clientAiApiKey === '***';
+      if (!keepingMaskedApiKey) {
+        const normalizedApiKey = clientAiApiKey.trim();
+        payload.client_ai_api_key = normalizedApiKey || null;
+      }
+
       if (selectedActivation) {
-        await updateActivation(selectedActivation.id, payload);
+        const updated = await updateActivation(selectedActivation.id, payload);
+        if (!updated) throw new Error('Não foi possível atualizar a configuração.');
         toast.success('Configuração atualizada!');
       } else {
-        await activateAgent({
+        const activated = await activateAgent({
           global_agent_id: selectedAgent.id,
           connection_id: selectedConnection,
           ...payload,
         });
+        if (!activated) throw new Error('Não foi possível ativar o agente.');
         toast.success('Agente ativado!');
       }
+
+      await loadData();
       setConfigDialogOpen(false);
-      loadData();
     } catch (err: any) {
       toast.error(err.message || 'Erro ao salvar');
     } finally {
