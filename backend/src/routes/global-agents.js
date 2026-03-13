@@ -3,6 +3,11 @@ import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { callAI } from '../lib/ai-caller.js';
 import { searchKnowledge } from '../lib/knowledge-processor.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
 
 const router = Router();
 router.use(authenticate);
