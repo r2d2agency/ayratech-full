@@ -69,6 +69,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { QuickRepliesPanel } from "./QuickRepliesPanel";
+import { useQuickReplies, QuickReply } from "@/hooks/use-quick-replies";
 import { ConversationSummaryPanel, SummaryBadge } from "./ConversationSummaryPanel";
 import { SentimentIndicator } from "./SentimentIndicator";
 import { ActionSuggestions } from "./ActionSuggestions";
