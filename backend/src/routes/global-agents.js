@@ -742,6 +742,23 @@ router.post('/test/:id', async (req, res) => {
       systemPrompt += `\n\nInstruções adicionais do cliente:\n${prompt_additions}`;
     }
 
+    // Inject current date/time
+    const now = new Date();
+    const daysOfWeek = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const currentDay = daysOfWeek[now.getDay()];
+    const currentTime = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    const currentDate = now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+    
+    systemPrompt = systemPrompt
+      .replace(/\{\{current_day\}\}/gi, currentDay)
+      .replace(/\{\{current_time\}\}/gi, currentTime)
+      .replace(/\{\{current_date\}\}/gi, currentDate)
+      .replace(/\{\{dia_atual\}\}/gi, currentDay)
+      .replace(/\{\{hora_atual\}\}/gi, currentTime)
+      .replace(/\{\{data_atual\}\}/gi, currentDate);
+    
+    systemPrompt += `\n\nInformações de contexto:\n- Data atual: ${currentDate} (${currentDay})\n- Hora atual: ${currentTime} (horário de Brasília)`;
+
     // Include knowledge base
     if (agent.has_knowledge_base) {
       try {
