@@ -651,6 +651,26 @@ export default function Admin() {
     }
   };
 
+  const handleChangePassword = async () => {
+    if (!changePasswordUser || !changePasswordValue) {
+      toast.error('Informe a nova senha');
+      return;
+    }
+    if (changePasswordValue.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    const success = await changeUserPassword(changePasswordUser.id, changePasswordValue);
+    if (success) {
+      toast.success(`Senha do usuário ${changePasswordUser.email} alterada com sucesso!`);
+      setChangePasswordDialogOpen(false);
+      setChangePasswordUser(null);
+      setChangePasswordValue('');
+    } else if (error) {
+      toast.error(error);
+    }
+  };
+
   const isExpired = (expiresAt: string | null) => {
     if (!expiresAt) return false;
     return new Date(expiresAt) < new Date();
