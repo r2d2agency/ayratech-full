@@ -25,6 +25,44 @@ import { ChatMessage, Conversation } from "@/hooks/use-chat";
 import { AudioPlayer } from "./AudioPlayer";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
+import { LinkPreview } from "./LinkPreview";
+
+const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi;
+
+function extractUrls(text: string): string[] {
+  return text.match(URL_REGEX) || [];
+}
+
+function renderTextWithLinks(text: string, searchQuery: string, highlightText: (t: string, q: string) => React.ReactNode): React.ReactNode {
+  const parts = text.split(URL_REGEX);
+  const urls = text.match(URL_REGEX) || [];
+  
+  if (urls.length === 0) {
+    return searchQuery ? highlightText(text, searchQuery) : text;
+  }
+
+  const nodes: React.ReactNode[] = [];
+  parts.forEach((part, i) => {
+    if (part) {
+      nodes.push(searchQuery ? highlightText(part, searchQuery) : part);
+    }
+    if (i < urls.length) {
+      nodes.push(
+        <a
+          key={`link-${i}`}
+          href={urls[i]}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:opacity-80 break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {urls[i]}
+        </a>
+      );
+    }
+  });
+  return nodes;
+}
 
 interface ChatMessageBubbleProps {
   msg: ChatMessage;
