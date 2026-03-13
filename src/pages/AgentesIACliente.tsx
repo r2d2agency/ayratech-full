@@ -196,13 +196,23 @@ export default function AgentesIACliente() {
         : Promise.resolve([] as Connection[]),
     ]);
 
+    const normalizedAgents = (agentsData || []).map((agent) => ({
+      ...agent,
+      activations: (agent.activations || []).map((activation) => ({
+        ...activation,
+        schedule_mode: (activation.schedule_mode as 'always' | 'scheduled' | 'manual') || 'manual',
+        schedule_windows: normalizeScheduleWindows(activation.schedule_windows),
+        custom_field_values: normalizeCustomFieldValues(activation.custom_field_values),
+      })),
+    }));
+
     const mergedConnectionsMap = new Map<string, Connection>();
     [...orgScopedConns, ...assignedConns, ...orgDirectConns].forEach((conn) => {
       mergedConnectionsMap.set(conn.id, conn);
     });
 
     // Garante que conexões já ativadas continuem selecionáveis mesmo se alguma API falhar
-    agentsData.forEach((agent) => {
+    normalizedAgents.forEach((agent) => {
       agent.activations.forEach((activation) => {
         if (!activation.connection_id || mergedConnectionsMap.has(activation.connection_id)) return;
 
@@ -215,24 +225,26 @@ export default function AgentesIACliente() {
       });
     });
 
-    setAgents(agentsData);
+    setAgents(normalizedAgents);
     setConnections(Array.from(mergedConnectionsMap.values()));
     setAiModels(modelsData);
   };
 
   const handleOpenConfig = (agent: GlobalAgentForClient, activation?: GlobalAgentActivation) => {
+    const settings = extractActivationSettings(activation);
+
     setSelectedAgent(agent);
     setSelectedActivation(activation || null);
     setSelectedConnection(activation?.connection_id || '');
-    setScheduleMode(activation?.schedule_mode || 'manual');
-    setScheduleWindows(activation?.schedule_windows || []);
-    setCustomFieldValues(activation?.custom_field_values || {});
+    setScheduleMode(settings.scheduleMode);
+    setScheduleWindows(settings.scheduleWindows);
+    setCustomFieldValues(settings.customFieldValues);
     setPromptAdditions(activation?.prompt_additions || '');
-    setClientAiApiKey(activation?.client_ai_api_key || '');
-    setCustomName('');
-    setVoiceTone('professional');
-    setVoiceGender('female');
-    setSelectedModel(agent.ai_model || '');
+    setClientAiApiKey(activation?.client_ai_api_key ? '***' : '');
+    setCustomName(settings.customName);
+    setVoiceTone(settings.voiceTone);
+    setVoiceGender(settings.voiceGender);
+    setSelectedModel(settings.selectedModel || agent.ai_model || '');
     // Reset test messages for inline test tab
     setTestMessages([{
       id: 'welcome',
