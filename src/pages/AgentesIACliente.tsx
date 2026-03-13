@@ -92,7 +92,7 @@ export default function AgentesIACliente() {
   const loadData = async () => {
     const [agentsData, connsData, modelsData] = await Promise.all([
       getAvailableAgents(),
-      api<Connection[]>('/api/connections', { auth: true }).catch(() => []),
+      api<Connection[]>('/api/connections?scope=organization', { auth: true }).catch(() => []),
       getAIModels(),
     ]);
     setAgents(agentsData);
