@@ -138,17 +138,25 @@ async function processMessageInternal({
 
     // 2. If no active session, check if an agent is linked to this connection
     if (!session) {
-      const agent = await findAgentForConnection(connection.id, messageContent);
+      let agent = await findAgentForConnection(connection.id, messageContent);
+      
+      // 2.1 If no regular agent, check for global agent activations
+      if (!agent) {
+        agent = await findGlobalAgentForConnection(connection.id);
+      }
+      
       if (!agent) return { handled: false };
 
       // Create a new session
       session = await createSession(agent.id, conversationId, contactPhone, contactName);
       session._isNewSession = true;
+      session._isGlobalAgent = !!agent._isGlobalAgent;
       logInfo('ai_agent_processor.session_created', {
         sessionId: session.id,
         agentId: agent.id,
         conversationId,
         contactPhone,
+        isGlobal: !!agent._isGlobalAgent,
       });
 
       // Send greeting message if configured and it's a brand new session
