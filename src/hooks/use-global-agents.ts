@@ -37,6 +37,10 @@ export interface GlobalAgentForClient {
   custom_fields: GlobalAgentCustomField[];
   system_prompt: string;
   greeting_message?: string;
+  ai_provider?: string;
+  ai_model?: string;
+  capabilities?: string[];
+  has_knowledge_base?: boolean;
   activations: GlobalAgentActivation[];
 }
 
