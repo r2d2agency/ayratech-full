@@ -780,6 +780,33 @@ router.patch('/users/:id/superadmin', requireSuperadmin, async (req, res) => {
   }
 });
 
+// Change user password (superadmin only)
+router.patch('/users/:id/password', requireSuperadmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { new_password } = req.body;
+
+    if (!new_password || new_password.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter pelo menos 6 caracteres' });
+    }
+
+    const hashedPassword = await bcrypt.hash(new_password, 10);
+    const result = await query(
+      `UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, name`,
+      [hashedPassword, id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    res.json({ message: 'Senha atualizada com sucesso', user: result.rows[0] });
+  } catch (error) {
+    console.error('Change user password error:', error);
+    res.status(500).json({ error: 'Erro ao alterar senha' });
+  }
+});
+
 // ============================================
 // ORGANIZATIONS
 // ============================================

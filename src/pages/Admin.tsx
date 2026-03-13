@@ -20,7 +20,7 @@ import { useAdminSettings } from '@/hooks/use-branding';
 import { useUpload } from '@/hooks/use-upload';
 import { BrandingTab } from '@/components/admin/BrandingTab';
 import { toast } from 'sonner';
-import { Shield, Building2, Users, Plus, Trash2, Loader2, Pencil, Crown, Image, Package, CalendarIcon, UserPlus, Eye, MessageSquare, Receipt, Wifi, Upload, Palette, Bot, Clock, Briefcase, Search, AlertTriangle, Mail, Sparkles, Key, Server } from 'lucide-react';
+import { Shield, Building2, Users, Plus, Trash2, Loader2, Pencil, Crown, Image, Package, CalendarIcon, UserPlus, Eye, MessageSquare, Receipt, Wifi, Upload, Palette, Bot, Clock, Briefcase, Search, AlertTriangle, Mail, Sparkles, Key, Server, Lock } from 'lucide-react';
 import { WapiInstancesTab } from '@/components/admin/WapiInstancesTab';
 import { api } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
@@ -197,6 +197,11 @@ export default function Admin() {
   const [newUserPassword, setNewUserPassword] = useState('');
   const [newUserRole, setNewUserRole] = useState('agent');
 
+  // Change password dialog
+  const [changePasswordDialogOpen, setChangePasswordDialogOpen] = useState(false);
+  const [changePasswordUser, setChangePasswordUser] = useState<User | null>(null);
+  const [changePasswordValue, setChangePasswordValue] = useState('');
+
   const { 
     loading: actionLoading,
     error,
@@ -212,6 +217,7 @@ export default function Admin() {
     deletePlan,
     setSuperadmin,
     deleteUser,
+    changeUserPassword,
     searchUserByEmail,
     deleteUserByEmail,
     getOrganizationMembers,
@@ -640,6 +646,26 @@ export default function Admin() {
     if (success) {
       toast.success(`Usuário ${userEmail} excluído com sucesso!`);
       loadData();
+    } else if (error) {
+      toast.error(error);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (!changePasswordUser || !changePasswordValue) {
+      toast.error('Informe a nova senha');
+      return;
+    }
+    if (changePasswordValue.length < 6) {
+      toast.error('A senha deve ter pelo menos 6 caracteres');
+      return;
+    }
+    const success = await changeUserPassword(changePasswordUser.id, changePasswordValue);
+    if (success) {
+      toast.success(`Senha do usuário ${changePasswordUser.email} alterada com sucesso!`);
+      setChangePasswordDialogOpen(false);
+      setChangePasswordUser(null);
+      setChangePasswordValue('');
     } else if (error) {
       toast.error(error);
     }
@@ -1648,39 +1674,53 @@ export default function Admin() {
                             {new Date(user.created_at).toLocaleDateString('pt-BR')}
                           </TableCell>
                           <TableCell>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Tem certeza que deseja excluir o usuário <strong>{user.email}</strong>?
-                                    <br /><br />
-                                    Esta ação irá:
-                                    <ul className="list-disc list-inside mt-2 space-y-1">
-                                      <li>Remover o usuário de todas as organizações</li>
-                                      <li>Liberar o email para uso em novas contas</li>
-                                      <li>Excluir permanentemente todos os dados do usuário</li>
-                                    </ul>
-                                    <br />
-                                    <strong className="text-destructive">Esta ação não pode ser desfeita.</strong>
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    onClick={() => handleDeleteUser(user.id, user.email)}
-                                  >
-                                    Excluir Usuário
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Alterar senha"
+                                onClick={() => {
+                                  setChangePasswordUser(user);
+                                  setChangePasswordValue('');
+                                  setChangePasswordDialogOpen(true);
+                                }}
+                              >
+                                <Lock className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Excluir Usuário</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Tem certeza que deseja excluir o usuário <strong>{user.email}</strong>?
+                                      <br /><br />
+                                      Esta ação irá:
+                                      <ul className="list-disc list-inside mt-2 space-y-1">
+                                        <li>Remover o usuário de todas as organizações</li>
+                                        <li>Liberar o email para uso em novas contas</li>
+                                        <li>Excluir permanentemente todos os dados do usuário</li>
+                                      </ul>
+                                      <br />
+                                      <strong className="text-destructive">Esta ação não pode ser desfeita.</strong>
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      onClick={() => handleDeleteUser(user.id, user.email)}
+                                    >
+                                      Excluir Usuário
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -1690,6 +1730,38 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Change Password Dialog */}
+          <Dialog open={changePasswordDialogOpen} onOpenChange={setChangePasswordDialogOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Alterar Senha</DialogTitle>
+                <DialogDescription>
+                  Alterar a senha do usuário <strong>{changePasswordUser?.email}</strong>
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Nova Senha *</Label>
+                  <Input
+                    type="password"
+                    placeholder="Mínimo 6 caracteres"
+                    value={changePasswordValue}
+                    onChange={(e) => setChangePasswordValue(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setChangePasswordDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleChangePassword} disabled={actionLoading}>
+                  {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Salvar Senha
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* W-API Instances Tab */}
           <TabsContent value="wapi-instances" className="space-y-4">

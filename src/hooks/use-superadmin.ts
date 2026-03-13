@@ -339,6 +339,31 @@ export function useSuperadmin() {
     }
   }, []);
 
+  const changeUserPassword = useCallback(async (userId: string, newPassword: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`${API_URL}/api/admin/users/${userId}/password`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ new_password: newPassword })
+      });
+      
+      if (!response.ok) {
+        const res = await response.json();
+        throw new Error(res.error || 'Erro ao alterar senha');
+      }
+      
+      return true;
+    } catch (err: any) {
+      setError(err.message);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // ============================================
   // ORGANIZATIONS
   // ============================================
@@ -559,6 +584,7 @@ export function useSuperadmin() {
     getAllUsers,
     setSuperadmin,
     deleteUser,
+    changeUserPassword,
     searchUserByEmail,
     deleteUserByEmail,
     // Organizations
