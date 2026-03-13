@@ -105,13 +105,37 @@ export default function AgentesIACliente() {
   }, [testMessages]);
 
   const loadData = async () => {
-    const [agentsData, connsData, modelsData] = await Promise.all([
+    const [agentsData, modelsData, orgScopedConns, assignedConns, orgDirectConns] = await Promise.all([
       getAvailableAgents(),
-      api<Connection[]>('/api/connections?scope=organization', { auth: true }).catch(() => []),
       getAIModels(),
+      api<Connection[]>('/api/connections?scope=organization', { auth: true }).catch(() => []),
+      api<Connection[]>('/api/connections', { auth: true }).catch(() => []),
+      user?.organization_id
+        ? api<Connection[]>(`/api/organizations/${user.organization_id}/connections`, { auth: true }).catch(() => [])
+        : Promise.resolve([] as Connection[]),
     ]);
+
+    const mergedConnectionsMap = new Map<string, Connection>();
+    [...orgScopedConns, ...assignedConns, ...orgDirectConns].forEach((conn) => {
+      mergedConnectionsMap.set(conn.id, conn);
+    });
+
+    // Garante que conexões já ativadas continuem selecionáveis mesmo se alguma API falhar
+    agentsData.forEach((agent) => {
+      agent.activations.forEach((activation) => {
+        if (!activation.connection_id || mergedConnectionsMap.has(activation.connection_id)) return;
+
+        mergedConnectionsMap.set(activation.connection_id, {
+          id: activation.connection_id,
+          name: activation.connection_name || `Conexão vinculada (${activation.connection_id.slice(0, 8)})`,
+          phone_number: activation.connection_phone,
+          status: 'disconnected',
+        });
+      });
+    });
+
     setAgents(agentsData);
-    setConnections(connsData);
+    setConnections(Array.from(mergedConnectionsMap.values()));
     setAiModels(modelsData);
   };
 
