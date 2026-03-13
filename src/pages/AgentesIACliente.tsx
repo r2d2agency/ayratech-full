@@ -118,7 +118,17 @@ const normalizeScheduleWindows = (windows: unknown): ScheduleWindow[] => {
     .filter((window): window is ScheduleWindow => Boolean(window));
 };
 
-const extractActivationSettings = (activation?: GlobalAgentActivation | null) => {
+type ActivationSettings = {
+  scheduleMode: 'always' | 'scheduled' | 'manual';
+  scheduleWindows: ScheduleWindow[];
+  customFieldValues: Record<string, string>;
+  customName: string;
+  voiceTone: string;
+  voiceGender: 'female' | 'male';
+  selectedModel: string;
+};
+
+const extractActivationSettings = (activation?: GlobalAgentActivation | null): ActivationSettings => {
   const normalizedFields = normalizeCustomFieldValues(activation?.custom_field_values);
   const visibleCustomFields: Record<string, string> = {};
 
