@@ -604,8 +604,22 @@ async function findGlobalAgentForConnection(connectionId) {
           systemPrompt = personalizationParts.join(' ') + '\n\n' + systemPrompt;
         }
 
-        // Always inject context about current date/time even if not in template
-        systemPrompt += `\n\nInformações de contexto:\n- Data atual: ${currentDate} (${currentDay})\n- Hora atual: ${currentTime} (horário de Brasília)`;
+        // Build schedule/business hours context
+        let scheduleInfo = '';
+        const { schedule_mode, schedule_windows } = agent;
+        if (schedule_mode === 'scheduled' && Array.isArray(schedule_windows) && schedule_windows.length > 0) {
+          const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+          const windowDescriptions = schedule_windows.map(w => {
+            const days = (w.days || []).map(d => dayNames[d] || d).join(', ');
+            return `  • ${days}: ${w.start || '00:00'} às ${w.end || '23:59'}`;
+          });
+          scheduleInfo = `\n- Horário de funcionamento/atendimento:\n${windowDescriptions.join('\n')}`;
+        } else if (schedule_mode === 'always') {
+          scheduleInfo = '\n- Horário de funcionamento: Atendimento 24 horas';
+        }
+
+        // Always inject context about current date/time and schedule
+        systemPrompt += `\n\nInformações de contexto:\n- Data atual: ${currentDate} (${currentDay})\n- Hora atual: ${currentTime} (horário de Brasília)${scheduleInfo}`;
 
         // Add prompt additions
         if (agent.prompt_additions) {
