@@ -20,7 +20,7 @@ import { useAdminSettings } from '@/hooks/use-branding';
 import { useUpload } from '@/hooks/use-upload';
 import { BrandingTab } from '@/components/admin/BrandingTab';
 import { toast } from 'sonner';
-import { Shield, Building2, Users, Plus, Trash2, Loader2, Pencil, Crown, Image, Package, CalendarIcon, UserPlus, Eye, MessageSquare, Receipt, Wifi, Upload, Palette, Bot, Clock, Briefcase, Search, AlertTriangle, Mail, Sparkles, Key, Server } from 'lucide-react';
+import { Shield, Building2, Users, Plus, Trash2, Loader2, Pencil, Crown, Image, Package, CalendarIcon, UserPlus, Eye, MessageSquare, Receipt, Wifi, Upload, Palette, Bot, Clock, Briefcase, Search, AlertTriangle, Mail, Sparkles, Key, Server, Lock } from 'lucide-react';
 import { WapiInstancesTab } from '@/components/admin/WapiInstancesTab';
 import { api } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
