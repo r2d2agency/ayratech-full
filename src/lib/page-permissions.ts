@@ -4,6 +4,7 @@ export const PAGE_PERMISSIONS = [
   { key: 'chat', label: 'Chat', section: 'Atendimento', icon: 'MessagesSquare' },
   { key: 'secretaria_ia', label: 'Secretária IA', section: 'Atendimento', icon: 'Bot' },
   { key: 'agentes_ia', label: 'Agentes IA', section: 'Atendimento', icon: 'Sparkles' },
+  { key: 'ia_assistentes', label: 'IA Assistentes', section: 'Atendimento', icon: 'Bot' },
   { key: 'chatbots', label: 'Chatbots', section: 'Atendimento', icon: 'Bot' },
   { key: 'fluxos', label: 'Fluxos', section: 'Atendimento', icon: 'GitBranch' },
   { key: 'departamentos', label: 'Departamentos', section: 'Atendimento', icon: 'Building2' },

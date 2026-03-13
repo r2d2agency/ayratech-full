@@ -138,17 +138,25 @@ async function processMessageInternal({
 
     // 2. If no active session, check if an agent is linked to this connection
     if (!session) {
-      const agent = await findAgentForConnection(connection.id, messageContent);
+      let agent = await findAgentForConnection(connection.id, messageContent);
+      
+      // 2.1 If no regular agent, check for global agent activations
+      if (!agent) {
+        agent = await findGlobalAgentForConnection(connection.id);
+      }
+      
       if (!agent) return { handled: false };
 
       // Create a new session
       session = await createSession(agent.id, conversationId, contactPhone, contactName);
       session._isNewSession = true;
+      session._isGlobalAgent = !!agent._isGlobalAgent;
       logInfo('ai_agent_processor.session_created', {
         sessionId: session.id,
         agentId: agent.id,
         conversationId,
         contactPhone,
+        isGlobal: !!agent._isGlobalAgent,
       });
 
       // Send greeting message if configured and it's a brand new session
@@ -527,7 +535,98 @@ function isWithinBusinessHours(startTime, endTime, businessDays) {
   return currentMinutes >= start && currentMinutes < end;
 }
 
+// ==================== GLOBAL AGENT RESOLUTION ====================
+
+/**
+ * Find a global agent activation for a connection, checking schedule windows
+ */
+async function findGlobalAgentForConnection(connectionId) {
+  try {
+    const result = await query(
+      `SELECT ga.*, act.schedule_mode, act.schedule_windows, 
+              act.custom_field_values, act.prompt_additions
+       FROM global_agent_activations act
+       JOIN global_ai_agents ga ON ga.id = act.global_agent_id AND ga.is_active = true
+       WHERE act.connection_id = $1 AND act.is_active = true
+       ORDER BY act.created_at ASC
+       LIMIT 5`,
+      [connectionId]
+    );
+
+    for (const agent of result.rows) {
+      if (isGlobalAgentActive(agent)) {
+        // Build a virtual agent object compatible with the existing flow
+        // Merge custom field values into the system prompt
+        let systemPrompt = agent.system_prompt || '';
+        
+        // Inject custom field values
+        const fieldValues = agent.custom_field_values || {};
+        for (const [key, value] of Object.entries(fieldValues)) {
+          if (value) {
+            systemPrompt = systemPrompt.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), String(value));
+          }
+        }
+        
+        // Add prompt additions
+        if (agent.prompt_additions) {
+          systemPrompt += '\n\n' + agent.prompt_additions;
+        }
+
+        agent.system_prompt = systemPrompt;
+        agent._isGlobalAgent = true;
+        return agent;
+      }
+    }
+  } catch (err) {
+    // Table may not exist yet
+    if (!String(err).includes('does not exist')) {
+      logError('ai_agent_processor.global_agent_lookup_error', err);
+    }
+  }
+
+  return null;
+}
+
+function isGlobalAgentActive(agent) {
+  const { schedule_mode, schedule_windows } = agent;
+
+  if (schedule_mode === 'always') return true;
+  if (schedule_mode === 'manual') return true; // manual = controlled by is_active flag only
+
+  if (schedule_mode === 'scheduled') {
+    const windows = Array.isArray(schedule_windows) ? schedule_windows : [];
+    if (windows.length === 0) return false;
+
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    for (const window of windows) {
+      const days = Array.isArray(window.days) ? window.days : [];
+      if (!days.includes(dayOfWeek)) continue;
+
+      const [startH, startM] = (window.start || '00:00').split(':').map(Number);
+      const [endH, endM] = (window.end || '23:59').split(':').map(Number);
+      const start = startH * 60 + (startM || 0);
+      const end = endH * 60 + (endM || 0);
+
+      // Handle overnight windows (e.g., 22:00 - 07:00)
+      if (start <= end) {
+        if (currentMinutes >= start && currentMinutes < end) return true;
+      } else {
+        // Crosses midnight
+        if (currentMinutes >= start || currentMinutes < end) return true;
+      }
+    }
+
+    return false;
+  }
+
+  return false;
+}
+
 // ==================== HANDOFF ====================
+
 
 async function handleHandoff(session, agent, connection, contactPhone, reason) {
   // End the session

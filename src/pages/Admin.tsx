@@ -22,6 +22,7 @@ import { BrandingTab } from '@/components/admin/BrandingTab';
 import { toast } from 'sonner';
 import { Shield, Building2, Users, Plus, Trash2, Loader2, Pencil, Crown, Image, Package, CalendarIcon, UserPlus, Eye, MessageSquare, Receipt, Wifi, Upload, Palette, Bot, Clock, Briefcase, Search, AlertTriangle, Mail, Sparkles, Key, Server, Lock } from 'lucide-react';
 import { WapiInstancesTab } from '@/components/admin/WapiInstancesTab';
+import { GlobalAgentsTab } from '@/components/admin/GlobalAgentsTab';
 import { api } from '@/lib/api';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
@@ -710,7 +711,7 @@ export default function Admin() {
         </div>
 
         <Tabs defaultValue="plans" className="space-y-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-6">
+          <TabsList className="grid w-full max-w-5xl grid-cols-7">
             <TabsTrigger value="plans" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Planos
@@ -722,6 +723,10 @@ export default function Admin() {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Usuários
+            </TabsTrigger>
+            <TabsTrigger value="global-agents" className="flex items-center gap-2">
+              <Bot className="h-4 w-4" />
+              IA Global
             </TabsTrigger>
             <TabsTrigger value="wapi-instances" className="flex items-center gap-2">
               <Server className="h-4 w-4" />
@@ -1873,6 +1878,9 @@ export default function Admin() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Global Agents Tab */}
+          <GlobalAgentsTab />
 
           {/* Branding Tab */}
           <BrandingTab />
