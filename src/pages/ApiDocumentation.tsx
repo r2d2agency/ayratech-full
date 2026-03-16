@@ -404,6 +404,7 @@ print(response.json())`;
               </CardContent>
             </Card>
           </TabsContent>
+          )}
 
           {/* ========== DOCS TAB ========== */}
           <TabsContent value="docs" className="space-y-6">
