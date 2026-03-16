@@ -80,12 +80,10 @@ const Index = () => {
   const [recentCampaigns, setRecentCampaigns] = useState<Campaign[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  useEffect(() => {
-    loadDashboardData();
-  }, []);
+  const refreshTimerRef = useRef<ReturnType<typeof setInterval>>();
 
-  const loadDashboardData = async () => {
-    setLoading(true);
+  const loadDashboardData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       // Load critical data first (fast)
       const attendancePromise = api<{ waiting: number; attending: number; finished: number }>('/api/chat/conversations/attendance-counts?is_group=false').catch(() => ({ waiting: 0, attending: 0, finished: 0 }));
