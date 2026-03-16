@@ -409,11 +409,12 @@ export function AgentEditorDialog({ open, onOpenChange, agent, onSaved }: AgentE
                       <Label>Provedor de IA</Label>
                       <Select
                         value={formData.ai_provider}
-                        onValueChange={(value: 'openai' | 'gemini') => {
+                        onValueChange={(value: 'openai' | 'gemini' | 'openrouter') => {
+                          const defaultModel = value === 'openai' ? 'gpt-4o-mini' : value === 'gemini' ? 'gemini-1.5-flash' : 'openai/gpt-4o-mini';
                           setFormData(prev => ({
                             ...prev,
                             ai_provider: value,
-                            ai_model: value === 'openai' ? 'gpt-4o-mini' : 'gemini-1.5-flash'
+                            ai_model: defaultModel
                           }));
                         }}
                       >
@@ -431,6 +432,12 @@ export function AgentEditorDialog({ open, onOpenChange, agent, onSaved }: AgentE
                             <div className="flex items-center gap-2">
                               <Brain className="h-4 w-4 text-blue-500" />
                               Google Gemini
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="openrouter">
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-purple-500" />
+                              OpenRouter
                             </div>
                           </SelectItem>
                         </SelectContent>
