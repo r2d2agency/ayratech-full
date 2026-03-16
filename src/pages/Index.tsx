@@ -27,6 +27,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { Button } from "@/components/ui/button";
 import { Rocket } from "lucide-react";
+import { chatEvents } from "@/lib/chat-events";
 
 interface DashboardStats {
   totalContacts: number;
