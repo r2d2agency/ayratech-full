@@ -150,6 +150,11 @@ export default function Organizacoes() {
   });
   const [leadGleegoApiKey, setLeadGleegoApiKey] = useState('');
   const [leadGleegoApiKeyMasked, setLeadGleegoApiKeyMasked] = useState('');
+  const [gleegoFunnelId, setGleegoFunnelId] = useState('');
+  const [gleegoStageId, setGleegoStageId] = useState('');
+  const [gleegoWebhookId, setGleegoWebhookId] = useState('');
+  const [gleegoFunnels, setGleegoFunnels] = useState<Array<{id: string; name: string; stages?: Array<{id: string; name: string}>}>>([]);
+  const [gleegoWebhooks, setGleegoWebhooks] = useState<Array<{id: string; name: string; distribution_enabled: boolean}>>([]);
   const [savingModules, setSavingModules] = useState(false);
 
   // Permission templates
@@ -249,9 +254,33 @@ export default function Organizacoes() {
     try {
       const settings = await api<any>(`/api/lead-gleego/settings`);
       setLeadGleegoApiKeyMasked(settings.lead_gleego_api_key_masked || '');
+      setGleegoFunnelId(settings.lead_gleego_funnel_id || '');
+      setGleegoStageId(settings.lead_gleego_stage_id || '');
+      setGleegoWebhookId(settings.lead_gleego_webhook_id || '');
     } catch {
       // ignore
     }
+    // Load funnels with stages for Gleego config
+    try {
+      const funnels = await api<any[]>(`/api/crm/funnels`);
+      // Load stages for each funnel
+      const funnelsWithStages = await Promise.all(
+        (funnels || []).map(async (f: any) => {
+          try {
+            const detail = await api<any>(`/api/crm/funnels/${f.id}`);
+            return { ...f, stages: detail.stages || [] };
+          } catch {
+            return { ...f, stages: [] };
+          }
+        })
+      );
+      setGleegoFunnels(funnelsWithStages);
+    } catch { }
+    // Load webhooks for distribution selection
+    try {
+      const webhooks = await api<any[]>(`/api/lead-webhooks`);
+      setGleegoWebhooks(webhooks || []);
+    } catch { }
   };
 
   const loadTemplates = async (orgId: string) => {
@@ -349,21 +378,20 @@ export default function Organizacoes() {
     });
   };
 
-  const handleSaveLeadGleegoKey = async () => {
-    if (!leadGleegoApiKey.trim()) {
-      toast.error('Informe a chave de API');
-      return;
-    }
+  const handleSaveLeadGleegoSettings = async () => {
     try {
-      await api('/api/lead-gleego/settings', {
-        method: 'PUT',
-        body: { lead_gleego_api_key: leadGleegoApiKey },
-      });
-      toast.success('Chave do Lead Gleego salva!');
+      const body: Record<string, any> = {};
+      if (leadGleegoApiKey.trim()) body.lead_gleego_api_key = leadGleegoApiKey;
+      body.lead_gleego_funnel_id = gleegoFunnelId || null;
+      body.lead_gleego_stage_id = gleegoStageId || null;
+      body.lead_gleego_webhook_id = (gleegoWebhookId && gleegoWebhookId !== 'none') ? gleegoWebhookId : null;
+
+      await api('/api/lead-gleego/settings', { method: 'PUT', body });
+      toast.success('Configurações do Lead Gleego salvas!');
       setLeadGleegoApiKey('');
       if (selectedOrg) loadModules(selectedOrg.id);
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao salvar chave');
+      toast.error(error.message || 'Erro ao salvar configurações');
     }
   };
 
@@ -1417,11 +1445,11 @@ export default function Organizacoes() {
                             />
                           </div>
                           {modulesEnabled.lead_gleego && canManageOrg && (
-                            <div className="space-y-3 pt-2 border-t">
+                            <div className="space-y-4 pt-2 border-t">
                               <div>
                                 <Label className="text-sm font-medium flex items-center gap-2">
                                   <KeyRound className="h-4 w-4" />
-                                  Chave de API (SSO)
+                                  Chave de API (SSO + Recebimento de Leads)
                                 </Label>
                                 {leadGleegoApiKeyMasked && (
                                   <p className="text-xs text-muted-foreground mt-1">
@@ -1432,14 +1460,77 @@ export default function Organizacoes() {
                               <div className="flex gap-2">
                                 <Input
                                   type="password"
-                                  placeholder="Cole a chave secreta SSO aqui"
+                                  placeholder="Cole a chave secreta aqui"
                                   value={leadGleegoApiKey}
                                   onChange={(e) => setLeadGleegoApiKey(e.target.value)}
                                 />
-                                <Button onClick={handleSaveLeadGleegoKey} size="sm">
-                                  Salvar Chave
-                                </Button>
                               </div>
+
+                              {/* CRM Config */}
+                              <div className="space-y-3 pt-3 border-t border-border/50">
+                                <p className="text-sm font-medium">📊 Destino dos Leads no CRM</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Configure para onde os leads do FormGleego serão enviados. Sem funil/etapa, vão para Prospects.
+                                </p>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <Label className="text-xs">Funil</Label>
+                                    <Select value={gleegoFunnelId} onValueChange={(val) => { setGleegoFunnelId(val); setGleegoStageId(''); }}>
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Selecione o funil" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {gleegoFunnels.map(f => (
+                                          <SelectItem key={f.id} value={f.id}>{f.name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                  <div>
+                                    <Label className="text-xs">Etapa</Label>
+                                    <Select value={gleegoStageId} onValueChange={setGleegoStageId} disabled={!gleegoFunnelId}>
+                                      <SelectTrigger className="h-9">
+                                        <SelectValue placeholder="Selecione a etapa" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        {(gleegoFunnels.find(f => f.id === gleegoFunnelId)?.stages || []).map(s => (
+                                          <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Distribution */}
+                              <div className="space-y-3 pt-3 border-t border-border/50">
+                                <p className="text-sm font-medium">🔄 Distribuição Round-Robin</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Selecione um webhook com distribuição ativa para usar o mesmo rodízio de vendedores.
+                                </p>
+                                <Select value={gleegoWebhookId} onValueChange={setGleegoWebhookId}>
+                                  <SelectTrigger className="h-9">
+                                    <SelectValue placeholder="Nenhum (sem distribuição)" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="none">Nenhum</SelectItem>
+                                    {gleegoWebhooks.filter(w => w.distribution_enabled).map(w => (
+                                      <SelectItem key={w.id} value={w.id}>
+                                        {w.name} ✅
+                                      </SelectItem>
+                                    ))}
+                                    {gleegoWebhooks.filter(w => !w.distribution_enabled).map(w => (
+                                      <SelectItem key={w.id} value={w.id}>
+                                        {w.name} (sem distribuição)
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <Button onClick={handleSaveLeadGleegoSettings} size="sm" className="w-full">
+                                Salvar Configurações do Gleego
+                              </Button>
                             </div>
                           )}
                         </div>
