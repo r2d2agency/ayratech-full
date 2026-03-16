@@ -252,6 +252,7 @@ print(response.json())`;
           </TabsList>
 
           {/* ========== TOKENS TAB ========== */}
+          {isAuthenticated && (
           <TabsContent value="tokens" className="space-y-4">
             <Card>
               <CardHeader>
