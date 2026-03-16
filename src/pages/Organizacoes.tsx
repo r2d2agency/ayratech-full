@@ -150,6 +150,11 @@ export default function Organizacoes() {
   });
   const [leadGleegoApiKey, setLeadGleegoApiKey] = useState('');
   const [leadGleegoApiKeyMasked, setLeadGleegoApiKeyMasked] = useState('');
+  const [gleegoFunnelId, setGleegoFunnelId] = useState('');
+  const [gleegoStageId, setGleegoStageId] = useState('');
+  const [gleegoWebhookId, setGleegoWebhookId] = useState('');
+  const [gleegoFunnels, setGleegoFunnels] = useState<Array<{id: string; name: string; stages?: Array<{id: string; name: string}>}>>([]);
+  const [gleegoWebhooks, setGleegoWebhooks] = useState<Array<{id: string; name: string; distribution_enabled: boolean}>>([]);
   const [savingModules, setSavingModules] = useState(false);
 
   // Permission templates
