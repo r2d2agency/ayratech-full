@@ -373,7 +373,7 @@ export default function Organizacoes() {
       if (leadGleegoApiKey.trim()) body.lead_gleego_api_key = leadGleegoApiKey;
       body.lead_gleego_funnel_id = gleegoFunnelId || null;
       body.lead_gleego_stage_id = gleegoStageId || null;
-      body.lead_gleego_webhook_id = gleegoWebhookId || null;
+      body.lead_gleego_webhook_id = (gleegoWebhookId && gleegoWebhookId !== 'none') ? gleegoWebhookId : null;
 
       await api('/api/lead-gleego/settings', { method: 'PUT', body });
       toast.success('Configurações do Lead Gleego salvas!');
@@ -382,7 +382,6 @@ export default function Organizacoes() {
     } catch (error: any) {
       toast.error(error.message || 'Erro ao salvar configurações');
     }
-  };
   };
 
   const handleSaveModules = async () => {
