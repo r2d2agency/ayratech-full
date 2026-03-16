@@ -112,7 +112,7 @@ export function AgentEditorDialog({ open, onOpenChange, agent, onSaved }: AgentE
     name: '',
     description: '',
     avatar_url: '',
-    ai_provider: 'openai' as 'openai' | 'gemini',
+    ai_provider: 'openai' as 'openai' | 'gemini' | 'openrouter',
     ai_model: 'gpt-4o-mini',
     ai_api_key: '',
     system_prompt: DEFAULT_SYSTEM_PROMPT,
