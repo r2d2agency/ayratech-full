@@ -367,22 +367,22 @@ export default function Organizacoes() {
     });
   };
 
-  const handleSaveLeadGleegoKey = async () => {
-    if (!leadGleegoApiKey.trim()) {
-      toast.error('Informe a chave de API');
-      return;
-    }
+  const handleSaveLeadGleegoSettings = async () => {
     try {
-      await api('/api/lead-gleego/settings', {
-        method: 'PUT',
-        body: { lead_gleego_api_key: leadGleegoApiKey },
-      });
-      toast.success('Chave do Lead Gleego salva!');
+      const body: Record<string, any> = {};
+      if (leadGleegoApiKey.trim()) body.lead_gleego_api_key = leadGleegoApiKey;
+      body.lead_gleego_funnel_id = gleegoFunnelId || null;
+      body.lead_gleego_stage_id = gleegoStageId || null;
+      body.lead_gleego_webhook_id = gleegoWebhookId || null;
+
+      await api('/api/lead-gleego/settings', { method: 'PUT', body });
+      toast.success('Configurações do Lead Gleego salvas!');
       setLeadGleegoApiKey('');
       if (selectedOrg) loadModules(selectedOrg.id);
     } catch (error: any) {
-      toast.error(error.message || 'Erro ao salvar chave');
+      toast.error(error.message || 'Erro ao salvar configurações');
     }
+  };
   };
 
   const handleSaveModules = async () => {
