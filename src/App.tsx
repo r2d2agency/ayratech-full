@@ -147,6 +147,7 @@ const App = () => (
             <Route path="/tarefas" element={<ProtectedRoute><TarefasKanban /></ProtectedRoute>} />
             <Route path="/lead-gleego" element={<ProtectedRoute><LeadGleego /></ProtectedRoute>} />
             <Route path="/agentes-ia-cliente" element={<ProtectedRoute><AgentesIACliente /></ProtectedRoute>} />
+            <Route path="/respostas-rapidas" element={<ProtectedRoute><RespostasRapidas /></ProtectedRoute>} />
             <Route path="/f/:slug" element={<PublicFormPage />} />
             <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="*" element={<NotFound />} />
