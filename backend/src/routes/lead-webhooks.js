@@ -6,23 +6,26 @@ import { logInfo, logError } from '../logger.js';
 
 const router = express.Router();
 
-// ── Self-healing: ensure required prospects columns for webhook ingestion ──
+// ── Self-healing: ensure required columns for webhook ingestion ──
 (async () => {
-  const cols = [
+  const prospectCols = [
     { name: 'email', type: 'VARCHAR(255)' },
     { name: 'company_name', type: 'VARCHAR(255)' },
     { name: 'notes', type: 'TEXT' },
   ];
 
-  for (const col of cols) {
+  for (const col of prospectCols) {
     try {
       await query(`ALTER TABLE crm_prospects ADD COLUMN IF NOT EXISTS ${col.name} ${col.type}`);
-    } catch (_) {
-      // ignore if table doesn't exist yet during partial deploy/startup
-    }
+    } catch (_) {}
   }
 
-  logInfo('[Lead Webhooks] Self-healing crm_prospects columns check complete');
+  // Add source column to crm_deals for origin tracking
+  try {
+    await query(`ALTER TABLE crm_deals ADD COLUMN IF NOT EXISTS source VARCHAR(255)`);
+  } catch (_) {}
+
+  logInfo('[Lead Webhooks] Self-healing columns check complete');
 })();
 
 // Helper: Get user's organization
@@ -190,13 +193,13 @@ router.post('/receive/:token', async (req, res) => {
         }
       }
 
-      // Create deal
+      // Create deal with source tracking
       const dealResult = await query(
         `INSERT INTO crm_deals (
            organization_id, funnel_id, stage_id, company_id,
            title, value, probability, status, description,
-           owner_id, created_by
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, $9, $10)
+           owner_id, created_by, source
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'open', $8, $9, $10, $11)
          RETURNING id`,
         [
           webhook.organization_id,
@@ -208,7 +211,8 @@ router.post('/receive/:token', async (req, res) => {
           webhook.default_probability || 10,
           description,
           assignedOwnerId,
-          webhook.created_by
+          webhook.created_by,
+          `Webhook: ${webhook.name}`
         ]
       );
       
@@ -228,12 +232,12 @@ router.post('/receive/:token', async (req, res) => {
         if (contactResult.rows.length > 0) {
           contactId = contactResult.rows[0].id;
         } else {
-          // Create contact
+          // Create contact with webhook name as source
           const newContact = await query(
             `INSERT INTO contacts (organization_id, name, phone, email, source)
-             VALUES ($1, $2, $3, $4, 'webhook')
+             VALUES ($1, $2, $3, $4, $5)
              RETURNING id`,
-            [webhook.organization_id, mappedData.name, cleanPhone, mappedData.email]
+            [webhook.organization_id, mappedData.name, cleanPhone, mappedData.email, `Webhook: ${webhook.name}`]
           );
           contactId = newContact.rows[0].id;
         }
@@ -245,6 +249,36 @@ router.post('/receive/:token', async (req, res) => {
            ON CONFLICT (deal_id, contact_id) DO NOTHING`,
           [dealId, contactId]
         );
+
+        // Assign conversation in chat if exists (distribute to same user)
+        if (assignedOwnerId) {
+          try {
+            // Find conversations matching this phone across org connections
+            const convResult = await query(
+              `SELECT c.id, c.connection_id FROM conversations c
+               JOIN connections conn ON conn.id = c.connection_id
+               WHERE conn.organization_id = $1
+                 AND (c.contact_phone = $2 OR c.remote_jid LIKE $3)
+               ORDER BY c.last_message_at DESC NULLS LAST`,
+              [webhook.organization_id, cleanPhone, `%${cleanPhone}%`]
+            );
+
+            if (convResult.rows.length > 0) {
+              // Assign all matching conversations to the distributed user
+              for (const conv of convResult.rows) {
+                await query(
+                  `UPDATE conversations SET assigned_to = $1, updated_at = NOW() WHERE id = $2`,
+                  [assignedOwnerId, conv.id]
+                );
+              }
+              logInfo(`[Lead Webhook] Assigned ${convResult.rows.length} conversation(s) to user ${assignedOwnerId}`, {
+                phone: cleanPhone, dealId
+              });
+            }
+          } catch (convErr) {
+            logError('[Lead Webhook] Error assigning conversation', convErr);
+          }
+        }
       }
 
       // Log deal creation
