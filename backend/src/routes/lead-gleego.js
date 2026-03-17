@@ -284,7 +284,7 @@ router.post('/receive', async (req, res) => {
             }
           }
           const newContact = await query(
-            `INSERT INTO contacts (list_id, name, phone, email, source) VALUES ($1, $2, $3, $4, 'FormGleego') RETURNING id`,
+            `INSERT INTO contacts (list_id, name, phone, email, source) VALUES ($1, $2, $3, $4, 'form_gleego') RETURNING id`,
             [listId, mappedData.name, cleanPhone, mappedData.email]
           );
           contactId = newContact.rows[0].id;
