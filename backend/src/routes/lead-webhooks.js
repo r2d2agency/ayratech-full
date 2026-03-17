@@ -573,7 +573,8 @@ router.put('/:id', async (req, res) => {
       owner_id, 
       field_mapping,
       default_value,
-      default_probability 
+      default_probability,
+      deal_title_template
     } = req.body;
 
     const result = await query(
@@ -587,8 +588,9 @@ router.put('/:id', async (req, res) => {
          field_mapping = COALESCE($7, field_mapping),
          default_value = COALESCE($8, default_value),
          default_probability = COALESCE($9, default_probability),
+         deal_title_template = COALESCE($10, deal_title_template),
          updated_at = NOW()
-       WHERE id = $10 AND organization_id = $11
+       WHERE id = $11 AND organization_id = $12
        RETURNING *`,
       [
         name,
@@ -600,6 +602,7 @@ router.put('/:id', async (req, res) => {
         field_mapping ? JSON.stringify(field_mapping) : null,
         default_value,
         default_probability,
+        deal_title_template || null,
         id,
         org.organization_id
       ]

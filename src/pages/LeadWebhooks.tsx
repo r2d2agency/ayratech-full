@@ -126,6 +126,7 @@ export default function LeadWebhooks() {
       owner_id: webhook.owner_id || "",
       default_value: webhook.default_value,
       default_probability: webhook.default_probability,
+      deal_title_template: webhook.deal_title_template || "{nome}",
       field_mapping: webhook.field_mapping || {},
     });
     setShowEditor(true);
