@@ -215,6 +215,15 @@ router.post('/receive', async (req, res) => {
 
       const description = buildDescription(mappedData, payload);
 
+      // Build deal title from template
+      const dealTitle = dealTitleTemplate
+        .replace(/\{nome\}/gi, mappedData.name || 'Novo Lead')
+        .replace(/\{email\}/gi, mappedData.email || '')
+        .replace(/\{telefone\}/gi, cleanPhone || '')
+        .replace(/\{empresa\}/gi, mappedData.company_name || '')
+        .replace(/\{valor\}/gi, String(mappedData.value || 0))
+        .trim() || mappedData.name || 'Novo Lead';
+
       // Create deal
       const dealResult = await query(
         `INSERT INTO crm_deals (
@@ -225,7 +234,7 @@ router.post('/receive', async (req, res) => {
          RETURNING id`,
         [
           org.id, funnelId, stageId, companyId,
-          mappedData.name || 'Novo Lead',
+          dealTitle,
           mappedData.value,
           description,
           assignedOwnerId
