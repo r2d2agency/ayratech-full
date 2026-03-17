@@ -376,11 +376,16 @@ router.post('/receive/:token', async (req, res) => {
             );
 
             if (convResult.rows.length > 0) {
-              // Assign all matching conversations to the distributed user
+              // Assign all matching conversations to the distributed user and update contact name
               for (const conv of convResult.rows) {
                 await query(
-                  `UPDATE conversations SET assigned_to = $1, attendance_status = 'attending', updated_at = NOW() WHERE id = $2`,
-                  [assignedOwnerId, conv.id]
+                  `UPDATE conversations SET 
+                     assigned_to = $1, 
+                     attendance_status = 'attending', 
+                     contact_name = CASE WHEN (contact_name IS NULL OR contact_name = '' OR contact_name LIKE '%@%') AND $3 != '' AND $3 != 'Lead sem nome' THEN $3 ELSE contact_name END,
+                     updated_at = NOW() 
+                   WHERE id = $2`,
+                  [assignedOwnerId, conv.id, mappedData.name || '']
                 );
               }
               logInfo(`[Lead Webhook] Assigned ${convResult.rows.length} conversation(s) to user ${assignedOwnerId}`, {
