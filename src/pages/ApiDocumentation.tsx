@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { useLeadWebhooks, useLeadWebhookMutations, useWebhookLogs, getWebhookUrl, LeadWebhook } from "@/hooks/use-lead-webhooks";
-import { useCRMFunnels } from "@/hooks/use-crm";
+import { useLeadWebhooks, useLeadWebhookMutations, useWebhookLogs, useWebhookDistribution, getWebhookUrl, LeadWebhook } from "@/hooks/use-lead-webhooks";
+import { useCRMFunnels, useCRMFunnel } from "@/hooks/use-crm";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   BookOpen,
@@ -38,6 +40,10 @@ import {
   Zap,
   Activity,
   AlertCircle,
+  Settings,
+  Users,
+  UserPlus,
+  AlertTriangle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -70,21 +76,32 @@ export default function ApiDocumentation() {
   const { isAuthenticated } = useAuth();
   const { data: webhooks = [], isLoading } = useLeadWebhooks();
   const { data: funnels = [] } = useCRMFunnels();
-  const { createWebhook, deleteWebhook, regenerateToken } = useLeadWebhookMutations();
+  const { data: members = [] } = useQuery({
+    queryKey: ["org-members-for-api-tokens"],
+    queryFn: async () => {
+      const response = await api<{ members: Array<{ user_id: string; name: string; email: string; role: string }> }>("/api/organizations/current");
+      return response.members || [];
+    },
+    enabled: isAuthenticated,
+  });
+  const { createWebhook, updateWebhook, deleteWebhook, regenerateToken, toggleDistribution, addDistributionMember, removeDistributionMember } = useLeadWebhookMutations();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLogsDialog, setShowLogsDialog] = useState(false);
+  const [showDistribution, setShowDistribution] = useState(false);
   const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null);
+  const [editingWebhook, setEditingWebhook] = useState<LeadWebhook | null>(null);
   const [visibleTokens, setVisibleTokens] = useState<Set<string>>(new Set());
   const [newToken, setNewToken] = useState({
     name: "",
     description: "",
     funnel_id: "",
     stage_id: "",
+    owner_id: "",
   });
 
-  const selectedFunnel = funnels.find((f: any) => f.id === newToken.funnel_id);
-  const stages = selectedFunnel?.stages || [];
+  const { data: selectedFunnelData } = useCRMFunnel(newToken.funnel_id || null);
+  const stages = selectedFunnelData?.stages || [];
 
   const toggleTokenVisibility = (id: string) => {
     setVisibleTokens((prev) => {
@@ -101,15 +118,40 @@ export default function ApiDocumentation() {
       return;
     }
     try {
-      await createWebhook.mutateAsync({
-        name: newToken.name,
-        description: newToken.description,
-        funnel_id: newToken.funnel_id || undefined,
-        stage_id: newToken.stage_id || undefined,
-      });
+      if (editingWebhook) {
+        await updateWebhook.mutateAsync({
+          id: editingWebhook.id,
+          name: newToken.name,
+          description: newToken.description,
+          funnel_id: newToken.funnel_id || undefined,
+          stage_id: newToken.stage_id || undefined,
+          owner_id: newToken.owner_id || undefined,
+        });
+      } else {
+        await createWebhook.mutateAsync({
+          name: newToken.name,
+          description: newToken.description,
+          funnel_id: newToken.funnel_id || undefined,
+          stage_id: newToken.stage_id || undefined,
+          owner_id: newToken.owner_id || undefined,
+        });
+      }
       setShowCreateDialog(false);
-      setNewToken({ name: "", description: "", funnel_id: "", stage_id: "" });
+      setEditingWebhook(null);
+      setNewToken({ name: "", description: "", funnel_id: "", stage_id: "", owner_id: "" });
     } catch {}
+  };
+
+  const handleEditToken = (wh: LeadWebhook) => {
+    setEditingWebhook(wh);
+    setNewToken({
+      name: wh.name,
+      description: wh.description || "",
+      funnel_id: wh.funnel_id || "",
+      stage_id: wh.stage_id || "",
+      owner_id: wh.owner_id || "",
+    });
+    setShowCreateDialog(true);
   };
 
   const handleCopyUrl = (token: string) => {
@@ -226,7 +268,7 @@ print(response.json())`;
             </p>
           </div>
           {isAuthenticated && (
-            <Button onClick={() => setShowCreateDialog(true)} className="gap-2">
+            <Button onClick={() => { setEditingWebhook(null); setNewToken({ name: "", description: "", funnel_id: "", stage_id: "", owner_id: "" }); setShowCreateDialog(true); }} className="gap-2">
               <Plus className="h-4 w-4" />
               Gerar Novo Token
             </Button>
@@ -276,7 +318,7 @@ print(response.json())`;
                         Crie seu primeiro token para começar a receber leads via API
                       </p>
                     </div>
-                    <Button onClick={() => setShowCreateDialog(true)} variant="outline" className="gap-2">
+            <Button onClick={() => { setEditingWebhook(null); setNewToken({ name: "", description: "", funnel_id: "", stage_id: "", owner_id: "" }); setShowCreateDialog(true); }} variant="outline" className="gap-2">
                       <Plus className="h-4 w-4" />
                       Criar Primeiro Token
                     </Button>
@@ -344,16 +386,29 @@ print(response.json())`;
                               </div>
 
                               {/* Meta info */}
-                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                {wh.funnel_name && (
-                                  <span className="flex items-center gap-1">
-                                    <ArrowRight className="h-3 w-3" />
+                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground items-center">
+                                {wh.funnel_name ? (
+                                  <Badge variant="outline" className="text-xs text-green-600 border-green-300">
                                     {wh.funnel_name} {wh.stage_name && `→ ${wh.stage_name}`}
-                                  </span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="gap-1 text-xs">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Sem funil (Prospect)
+                                  </Badge>
+                                )}
+                                {wh.distribution_enabled && (
+                                  <Badge variant="secondary" className="gap-1 text-xs">
+                                    <Users className="h-3 w-3" />
+                                    Round-robin
+                                  </Badge>
+                                )}
+                                {!wh.distribution_enabled && wh.owner_name && (
+                                  <span>Responsável: {wh.owner_name}</span>
                                 )}
                                 <span className="flex items-center gap-1">
                                   <Activity className="h-3 w-3" />
-                                  {wh.total_leads} leads recebidos
+                                  {wh.total_leads} leads
                                 </span>
                                 {wh.last_lead_at && (
                                   <span>
@@ -364,7 +419,27 @@ print(response.json())`;
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditToken(wh)}
+                                className="gap-1"
+                                title="Editar configurações"
+                              >
+                                <Settings className="h-3 w-3" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant={wh.distribution_enabled ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => { setSelectedWebhookId(wh.id); setShowDistribution(true); }}
+                                className="gap-1"
+                                title="Distribuição round-robin"
+                              >
+                                <Users className="h-3 w-3" />
+                                Distribuição
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -738,12 +813,12 @@ print(response.json())`;
         </Tabs>
 
         {/* ========== CREATE TOKEN DIALOG ========== */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
+        <Dialog open={showCreateDialog} onOpenChange={(v) => { setShowCreateDialog(v); if (!v) setEditingWebhook(null); }}>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Gerar Novo Token API</DialogTitle>
+              <DialogTitle>{editingWebhook ? "Editar Token API" : "Gerar Novo Token API"}</DialogTitle>
               <DialogDescription>
-                Crie um token para receber leads de sistemas externos no seu CRM
+                {editingWebhook ? "Edite as configurações do token" : "Crie um token para receber leads de sistemas externos no seu CRM"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -763,33 +838,35 @@ print(response.json())`;
                   onChange={(e) => setNewToken({ ...newToken, description: e.target.value })}
                 />
               </div>
-              <div>
-                <Label>Funil de Destino</Label>
-                <Select
-                  value={newToken.funnel_id}
-                  onValueChange={(v) => setNewToken({ ...newToken, funnel_id: v, stage_id: "" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o funil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {funnels.map((f: any) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {stages.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Etapa Inicial</Label>
+                  <Label>Funil de Destino *</Label>
+                  <Select
+                    value={newToken.funnel_id}
+                    onValueChange={(v) => setNewToken({ ...newToken, funnel_id: v === "none" ? "" : v, stage_id: "" })}
+                  >
+                    <SelectTrigger className={!newToken.funnel_id ? "border-yellow-500" : ""}>
+                      <SelectValue placeholder="Selecione o funil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum (Prospect)</SelectItem>
+                      {funnels.map((f: any) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Etapa Inicial *</Label>
                   <Select
                     value={newToken.stage_id}
                     onValueChange={(v) => setNewToken({ ...newToken, stage_id: v })}
+                    disabled={!newToken.funnel_id}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Primeira etapa do funil" />
+                    <SelectTrigger className={newToken.funnel_id && !newToken.stage_id ? "border-yellow-500" : ""}>
+                      <SelectValue placeholder={newToken.funnel_id ? "Selecione a etapa" : "Selecione um funil primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
                       {stages.map((s: any) => (
@@ -800,19 +877,68 @@ print(response.json())`;
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {!newToken.funnel_id && (
+                <div className="flex items-center gap-2 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span><strong>Atenção:</strong> Sem funil, os leads serão criados como <strong>Prospect</strong> e NÃO aparecerão no Kanban.</span>
+                </div>
               )}
+
+              {newToken.funnel_id && newToken.stage_id && (
+                <div className="flex items-center gap-2 p-3 bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg text-sm">
+                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>Leads serão criados no <strong>CRM (Kanban)</strong> e terão conversa atribuída no <strong>Chat</strong>.</span>
+                </div>
+              )}
+
+              <div>
+                <Label>Responsável padrão</Label>
+                <Select
+                  value={newToken.owner_id}
+                  onValueChange={(v) => setNewToken({ ...newToken, owner_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {members.map((m) => (
+                      <SelectItem key={m.user_id} value={m.user_id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Se a distribuição round-robin estiver ativa, este campo é ignorado.
+                </p>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              <Button variant="outline" onClick={() => { setShowCreateDialog(false); setEditingWebhook(null); }}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateToken} disabled={createWebhook.isPending} className="gap-2">
-                {createWebhook.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Gerar Token
+              <Button onClick={handleCreateToken} disabled={createWebhook.isPending || updateWebhook.isPending} className="gap-2">
+                {(createWebhook.isPending || updateWebhook.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingWebhook ? "Salvar" : "Gerar Token"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ========== DISTRIBUTION DIALOG ========== */}
+        <DistributionPanel
+          webhookId={selectedWebhookId}
+          webhook={webhooks.find(w => w.id === selectedWebhookId) || null}
+          open={showDistribution}
+          onOpenChange={setShowDistribution}
+          members={members}
+          toggleDistribution={toggleDistribution}
+          addMember={addDistributionMember}
+          removeMember={removeDistributionMember}
+        />
 
         {/* ========== LOGS DIALOG ========== */}
         <WebhookLogsPanel
@@ -883,6 +1009,162 @@ function WebhookLogsPanel({
             </Table>
           )}
         </ScrollArea>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DistributionPanel({
+  webhookId,
+  webhook,
+  open,
+  onOpenChange,
+  members,
+  toggleDistribution,
+  addMember,
+  removeMember,
+}: {
+  webhookId: string | null;
+  webhook: LeadWebhook | null;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  members: Array<{ user_id: string; name: string; email: string; role: string }>;
+  toggleDistribution: any;
+  addMember: any;
+  removeMember: any;
+}) {
+  const { data: distribution, isLoading } = useWebhookDistribution(open ? webhookId : null);
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const handleToggle = async (enabled: boolean) => {
+    if (!webhookId) return;
+    await toggleDistribution.mutateAsync({ id: webhookId, enabled });
+  };
+
+  const handleAddMember = async () => {
+    if (!webhookId || !selectedUserId) return;
+    await addMember.mutateAsync({ webhookId, userId: selectedUserId });
+    setSelectedUserId("");
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!webhookId) return;
+    await removeMember.mutateAsync({ webhookId, userId });
+  };
+
+  const availableMembers = members.filter(
+    (m) => !distribution?.members?.some((dm: any) => dm.user_id === m.user_id)
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Distribuição de Leads (Round-Robin)
+          </DialogTitle>
+          <DialogDescription>
+            Distribua os leads automaticamente entre os vendedores. O lead aparece no CRM e no Chat do mesmo vendedor.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div>
+                <p className="font-medium text-sm">Distribuição automática</p>
+                <p className="text-xs text-muted-foreground">
+                  Quando ativado, os leads são distribuídos entre os membros abaixo
+                </p>
+              </div>
+              <Switch
+                checked={distribution?.distribution_enabled || false}
+                onCheckedChange={handleToggle}
+                disabled={toggleDistribution.isPending}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMembers.length === 0 ? (
+                    <SelectItem value="" disabled>Todos já adicionados</SelectItem>
+                  ) : (
+                    availableMembers.map((member) => (
+                      <SelectItem key={member.user_id} value={member.user_id}>
+                        {member.name} ({member.role})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleAddMember}
+                disabled={!selectedUserId || addMember.isPending}
+                className="gap-1"
+              >
+                <UserPlus className="h-4 w-4" />
+                Adicionar
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Membros da distribuição</Label>
+              {distribution?.members?.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm bg-muted/50 rounded-lg">
+                  Nenhum membro adicionado
+                </div>
+              ) : (
+                <ScrollArea className="max-h-[200px]">
+                  <div className="space-y-2">
+                    {distribution?.members?.map((member: any) => (
+                      <div
+                        key={member.user_id}
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{member.user_name}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{member.user_email}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {member.leads_today} leads hoje
+                            </Badge>
+                            {!member.is_active && (
+                              <Badge variant="secondary">Pausado</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member.user_id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+
+            {distribution?.distribution_enabled && distribution?.members?.length === 0 && (
+              <div className="flex items-center gap-2 p-3 bg-yellow-500/10 text-yellow-600 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4" />
+                Adicione membros para a distribuição funcionar
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
