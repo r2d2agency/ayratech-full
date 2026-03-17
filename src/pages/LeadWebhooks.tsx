@@ -582,9 +582,19 @@ Content-Type: application/json
                   <p className="text-sm text-muted-foreground">
                     <AlertCircle className="h-4 w-4 inline mr-1" />
                     O mapeamento de campos é opcional. O sistema detecta automaticamente campos comuns 
-                    como name, email, phone, company. Use o <strong>Inspetor de Payload</strong> nos logs para ver exatamente o que está chegando.
+                    como name, email, phone, company. Campos dentro de <code className="bg-muted px-1 rounded">custom_fields</code> são extraídos automaticamente.
                   </p>
                 </div>
+
+                {/* Show last payload fields for reference */}
+                {editingWebhook && (
+                  <LastPayloadFieldsExplorer 
+                    webhookId={editingWebhook.id} 
+                    onAddMapping={(sourceField, targetField) => {
+                      setForm({ ...form, field_mapping: { ...form.field_mapping, [sourceField]: targetField } });
+                    }}
+                  />
+                )}
 
                 {/* Auto-detect from last payload */}
                 {editingWebhook && (
@@ -603,7 +613,7 @@ Content-Type: application/json
                   {Object.entries(form.field_mapping).map(([source, target], index) => (
                     <div key={index} className="flex items-center gap-2">
                       <Input
-                        placeholder="Campo origem (ex: lead.nome)"
+                        placeholder="Campo origem (ex: custom_fields.novo_campo)"
                         value={source}
                         onChange={(e) => {
                           const newMapping = { ...form.field_mapping };
