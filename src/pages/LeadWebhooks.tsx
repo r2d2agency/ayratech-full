@@ -96,8 +96,8 @@ export default function LeadWebhooks() {
     default_probability: 10,
     field_mapping: {} as Record<string, string>,
   });
-
-  const selectedFunnel = funnels.find(f => f.id === form.funnel_id);
+  const { data: selectedFunnelData } = useCRMFunnel(form.funnel_id || null);
+  const selectedFunnel = selectedFunnelData;
 
   const handleCreate = () => {
     setEditingWebhook(null);
