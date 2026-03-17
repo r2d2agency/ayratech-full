@@ -813,12 +813,12 @@ print(response.json())`;
         </Tabs>
 
         {/* ========== CREATE TOKEN DIALOG ========== */}
-        <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-          <DialogContent>
+        <Dialog open={showCreateDialog} onOpenChange={(v) => { setShowCreateDialog(v); if (!v) setEditingWebhook(null); }}>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Gerar Novo Token API</DialogTitle>
+              <DialogTitle>{editingWebhook ? "Editar Token API" : "Gerar Novo Token API"}</DialogTitle>
               <DialogDescription>
-                Crie um token para receber leads de sistemas externos no seu CRM
+                {editingWebhook ? "Edite as configurações do token" : "Crie um token para receber leads de sistemas externos no seu CRM"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -838,33 +838,35 @@ print(response.json())`;
                   onChange={(e) => setNewToken({ ...newToken, description: e.target.value })}
                 />
               </div>
-              <div>
-                <Label>Funil de Destino</Label>
-                <Select
-                  value={newToken.funnel_id}
-                  onValueChange={(v) => setNewToken({ ...newToken, funnel_id: v, stage_id: "" })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o funil" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {funnels.map((f: any) => (
-                      <SelectItem key={f.id} value={f.id}>
-                        {f.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {stages.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Etapa Inicial</Label>
+                  <Label>Funil de Destino *</Label>
+                  <Select
+                    value={newToken.funnel_id}
+                    onValueChange={(v) => setNewToken({ ...newToken, funnel_id: v === "none" ? "" : v, stage_id: "" })}
+                  >
+                    <SelectTrigger className={!newToken.funnel_id ? "border-yellow-500" : ""}>
+                      <SelectValue placeholder="Selecione o funil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum (Prospect)</SelectItem>
+                      {funnels.map((f: any) => (
+                        <SelectItem key={f.id} value={f.id}>
+                          {f.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Etapa Inicial *</Label>
                   <Select
                     value={newToken.stage_id}
                     onValueChange={(v) => setNewToken({ ...newToken, stage_id: v })}
+                    disabled={!newToken.funnel_id}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Primeira etapa do funil" />
+                    <SelectTrigger className={newToken.funnel_id && !newToken.stage_id ? "border-yellow-500" : ""}>
+                      <SelectValue placeholder={newToken.funnel_id ? "Selecione a etapa" : "Selecione um funil primeiro"} />
                     </SelectTrigger>
                     <SelectContent>
                       {stages.map((s: any) => (
@@ -875,19 +877,68 @@ print(response.json())`;
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {!newToken.funnel_id && (
+                <div className="flex items-center gap-2 p-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-400 rounded-lg text-sm">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span><strong>Atenção:</strong> Sem funil, os leads serão criados como <strong>Prospect</strong> e NÃO aparecerão no Kanban.</span>
+                </div>
               )}
+
+              {newToken.funnel_id && newToken.stage_id && (
+                <div className="flex items-center gap-2 p-3 bg-green-500/10 text-green-700 dark:text-green-400 rounded-lg text-sm">
+                  <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>Leads serão criados no <strong>CRM (Kanban)</strong> e terão conversa atribuída no <strong>Chat</strong>.</span>
+                </div>
+              )}
+
+              <div>
+                <Label>Responsável padrão</Label>
+                <Select
+                  value={newToken.owner_id}
+                  onValueChange={(v) => setNewToken({ ...newToken, owner_id: v === "none" ? "" : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {members.map((m) => (
+                      <SelectItem key={m.user_id} value={m.user_id}>
+                        {m.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Se a distribuição round-robin estiver ativa, este campo é ignorado.
+                </p>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              <Button variant="outline" onClick={() => { setShowCreateDialog(false); setEditingWebhook(null); }}>
                 Cancelar
               </Button>
-              <Button onClick={handleCreateToken} disabled={createWebhook.isPending} className="gap-2">
-                {createWebhook.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
-                Gerar Token
+              <Button onClick={handleCreateToken} disabled={createWebhook.isPending || updateWebhook.isPending} className="gap-2">
+                {(createWebhook.isPending || updateWebhook.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingWebhook ? "Salvar" : "Gerar Token"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* ========== DISTRIBUTION DIALOG ========== */}
+        <DistributionPanel
+          webhookId={selectedWebhookId}
+          webhook={webhooks.find(w => w.id === selectedWebhookId) || null}
+          open={showDistribution}
+          onOpenChange={setShowDistribution}
+          members={members}
+          toggleDistribution={toggleDistribution}
+          addMember={addDistributionMember}
+          removeMember={removeDistributionMember}
+        />
 
         {/* ========== LOGS DIALOG ========== */}
         <WebhookLogsPanel
