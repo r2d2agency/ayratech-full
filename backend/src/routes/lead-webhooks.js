@@ -453,11 +453,12 @@ router.post('/receive/:token', async (req, res) => {
       [webhook.id]
     );
 
-    // Log the request
+    // Log the request with mapped data for debugging
+    const logMappedData = { ...mappedData, _mapping_log: mappingLog };
     await query(
-      `INSERT INTO lead_webhook_logs (webhook_id, request_body, response_status, response_message, deal_id, prospect_id, source_ip, user_agent)
-       VALUES ($1, $2, 200, $3, $4, $5, $6, $7)`,
-      [webhook.id, JSON.stringify(payload), responseMessage, dealId, prospectId, sourceIp, userAgent]
+      `INSERT INTO lead_webhook_logs (webhook_id, request_body, response_status, response_message, deal_id, prospect_id, source_ip, user_agent, mapped_data)
+       VALUES ($1, $2, 200, $3, $4, $5, $6, $7, $8)`,
+      [webhook.id, JSON.stringify(payload), responseMessage, dealId, prospectId, sourceIp, userAgent, JSON.stringify(logMappedData)]
     );
 
     logInfo(`[Lead Webhook] Successfully processed lead`, { 
