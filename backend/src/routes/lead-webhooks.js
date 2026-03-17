@@ -306,6 +306,16 @@ router.post('/receive/:token', async (req, res) => {
         let contactId;
         if (contactResult.rows.length > 0) {
           contactId = contactResult.rows[0].id;
+          // Update contact name/email if they were empty and we now have data
+          if (mappedData.name && mappedData.name !== 'Lead sem nome') {
+            await query(
+              `UPDATE contacts SET name = CASE WHEN name IS NULL OR name = '' OR name = 'Lead sem nome' THEN $1 ELSE name END,
+               email = CASE WHEN (email IS NULL OR email = '') AND $2 != '' THEN $2 ELSE email END,
+               updated_at = NOW()
+               WHERE id = $3`,
+              [mappedData.name, mappedData.email || '', contactId]
+            );
+          }
         } else {
           // Find or create a contact list for the first active connection
           const connForList = await query(
