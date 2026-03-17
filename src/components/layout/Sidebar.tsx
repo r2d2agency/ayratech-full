@@ -124,6 +124,7 @@ const getNavSections = (hasConnections: boolean): NavSection[] => [
     icon: User,
     items: [
       { name: "Conexões", href: "/conexao", icon: Plug, pageKey: 'conexoes' },
+      { name: "Templates Meta", href: "/meta-templates", icon: FileText, pageKey: 'meta_templates' },
       { name: "Ajustes", href: "/configuracoes", icon: Settings, pageKey: 'ajustes' },
     ],
   },
