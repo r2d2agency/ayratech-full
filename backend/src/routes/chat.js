@@ -2383,10 +2383,10 @@ router.post('/conversations/:id/transfer-connection', authenticate, async (req, 
               [listName, req.userId, targetConnectionId]
             );
           } catch (insertErr) {
-            // user_id column may not exist, try without it
+            // Fallback: still include user_id as it's NOT NULL
             targetList = await query(
-              `INSERT INTO contact_lists (name, connection_id) VALUES ($1, $2) RETURNING id`,
-              [listName, targetConnectionId]
+              `INSERT INTO contact_lists (name, user_id, connection_id) VALUES ($1, $2, $3) RETURNING id`,
+              [listName, req.userId, targetConnectionId]
             );
           }
         }
