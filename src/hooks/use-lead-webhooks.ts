@@ -30,6 +30,7 @@ export interface WebhookLog {
   id: string;
   webhook_id: string;
   request_body: Record<string, any>;
+  mapped_data?: Record<string, any>;
   response_status: number;
   response_message: string;
   deal_id?: string;

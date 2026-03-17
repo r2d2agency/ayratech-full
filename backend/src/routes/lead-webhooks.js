@@ -30,6 +30,11 @@ const router = express.Router();
     await query(`ALTER TABLE lead_webhooks ADD COLUMN IF NOT EXISTS deal_title_template VARCHAR(500) DEFAULT '{nome}'`);
   } catch (_) {}
 
+  // Add mapped_data column to logs for debugging
+  try {
+    await query(`ALTER TABLE lead_webhook_logs ADD COLUMN IF NOT EXISTS mapped_data JSONB`);
+  } catch (_) {}
+
   logInfo('[Lead Webhooks] Self-healing columns check complete');
 })();
 
@@ -94,35 +99,64 @@ router.post('/receive/:token', async (req, res) => {
       custom_fields: {}
     };
 
+    // Track which fields were mapped and how
+    const mappingLog = {};
+
     // Extract data using field mapping
     for (const [sourceField, targetField] of Object.entries(fieldMapping)) {
       const value = getNestedValue(payload, sourceField);
       if (value !== undefined && value !== null) {
         if (targetField === 'custom_fields') {
           mappedData.custom_fields[sourceField] = value;
+          mappingLog[sourceField] = { target: `custom_fields.${sourceField}`, value: String(value), source: 'mapping' };
         } else if (targetField in mappedData) {
           mappedData[targetField] = value;
+          mappingLog[sourceField] = { target: targetField, value: String(value), source: 'mapping' };
         }
+      } else {
+        mappingLog[sourceField] = { target: targetField, value: null, source: 'mapping', error: 'Campo não encontrado no payload' };
       }
     }
 
     // Fallback: try common field names if mapping doesn't provide required fields
     if (!mappedData.name) {
-      mappedData.name = payload.name || payload.full_name || payload.nome || 
+      const fallbackName = payload.name || payload.full_name || payload.nome || 
                         payload.firstName || payload.first_name ||
                         `${payload.first_name || ''} ${payload.last_name || ''}`.trim() ||
                         'Lead sem nome';
+      mappedData.name = fallbackName;
+      const usedKey = payload.name ? 'name' : payload.full_name ? 'full_name' : payload.nome ? 'nome' : payload.firstName ? 'firstName' : payload.first_name ? 'first_name' : 'fallback';
+      mappingLog['__fallback_name'] = { target: 'name', value: String(fallbackName), source: 'auto', usedKey };
     }
     if (!mappedData.email) {
-      mappedData.email = payload.email || payload.email_address || payload.e_mail || '';
+      const fallbackEmail = payload.email || payload.email_address || payload.e_mail || '';
+      mappedData.email = fallbackEmail;
+      if (fallbackEmail) {
+        const usedKey = payload.email ? 'email' : payload.email_address ? 'email_address' : 'e_mail';
+        mappingLog['__fallback_email'] = { target: 'email', value: fallbackEmail, source: 'auto', usedKey };
+      }
     }
     if (!mappedData.phone) {
-      mappedData.phone = payload.phone || payload.telefone || payload.whatsapp || 
+      const fallbackPhone = payload.phone || payload.telefone || payload.whatsapp || 
                          payload.phone_number || payload.cellphone || payload.celular || '';
+      mappedData.phone = fallbackPhone;
+      if (fallbackPhone) {
+        mappingLog['__fallback_phone'] = { target: 'phone', value: String(fallbackPhone), source: 'auto' };
+      }
     }
     if (!mappedData.company_name) {
-      mappedData.company_name = payload.company || payload.empresa || payload.company_name || '';
+      const fallbackCompany = payload.company || payload.empresa || payload.company_name || '';
+      mappedData.company_name = fallbackCompany;
+      if (fallbackCompany) {
+        mappingLog['__fallback_company'] = { target: 'company_name', value: fallbackCompany, source: 'auto' };
+      }
     }
+
+    logInfo(`[Lead Webhook] Mapped data for ${webhook.name}`, { 
+      webhookId: webhook.id, 
+      mappedData: JSON.stringify(mappedData).slice(0, 500),
+      mappingLog: JSON.stringify(mappingLog).slice(0, 500)
+    });
 
     // Clean phone number
     const cleanPhone = mappedData.phone.toString().replace(/\D/g, '');
@@ -419,11 +453,12 @@ router.post('/receive/:token', async (req, res) => {
       [webhook.id]
     );
 
-    // Log the request
+    // Log the request with mapped data for debugging
+    const logMappedData = { ...mappedData, _mapping_log: mappingLog };
     await query(
-      `INSERT INTO lead_webhook_logs (webhook_id, request_body, response_status, response_message, deal_id, prospect_id, source_ip, user_agent)
-       VALUES ($1, $2, 200, $3, $4, $5, $6, $7)`,
-      [webhook.id, JSON.stringify(payload), responseMessage, dealId, prospectId, sourceIp, userAgent]
+      `INSERT INTO lead_webhook_logs (webhook_id, request_body, response_status, response_message, deal_id, prospect_id, source_ip, user_agent, mapped_data)
+       VALUES ($1, $2, 200, $3, $4, $5, $6, $7, $8)`,
+      [webhook.id, JSON.stringify(payload), responseMessage, dealId, prospectId, sourceIp, userAgent, JSON.stringify(logMappedData)]
     );
 
     logInfo(`[Lead Webhook] Successfully processed lead`, { 
