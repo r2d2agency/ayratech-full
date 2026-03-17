@@ -821,32 +821,113 @@ function WebhookLogsDialog({
 
                   {/* Expanded payload */}
                   {expandedLogId === log.id && (
-                    <div className="border-t p-4 bg-muted/30 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-sm font-semibold">Payload completo recebido:</Label>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="gap-1 text-xs"
-                          onClick={() => {
-                            navigator.clipboard.writeText(JSON.stringify(log.request_body, null, 2));
-                            toast.success("Payload copiado");
-                          }}
-                        >
-                          <Copy className="h-3 w-3" />
-                          Copiar
-                        </Button>
+                    <div className="border-t p-4 bg-muted/30 space-y-4">
+                      {/* Mapped Data Summary */}
+                      {log.mapped_data && (
+                        <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+                          <Label className="text-sm font-semibold text-green-700 dark:text-green-400">✅ Dados Mapeados (o que o sistema extraiu):</Label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+                            {[
+                              { key: 'name', label: '👤 Nome', var: '{nome}' },
+                              { key: 'email', label: '📧 Email', var: '{email}' },
+                              { key: 'phone', label: '📱 Telefone', var: '{telefone}' },
+                              { key: 'company_name', label: '🏢 Empresa', var: '{empresa}' },
+                              { key: 'value', label: '💰 Valor', var: '{valor}' },
+                            ].map(field => (
+                              <div key={field.key} className="bg-background p-2 rounded border text-xs">
+                                <span className="font-medium">{field.label}</span>
+                                <div className="text-muted-foreground mt-0.5">
+                                  {log.mapped_data?.[field.key] 
+                                    ? <span className="text-green-600 dark:text-green-400 font-mono">{String(log.mapped_data[field.key])}</span>
+                                    : <span className="text-red-500">⚠️ vazio</span>
+                                  }
+                                </div>
+                                <code className="text-[10px] text-muted-foreground">{field.var}</code>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Custom fields */}
+                          {log.mapped_data?.custom_fields && Object.keys(log.mapped_data.custom_fields).length > 0 && (
+                            <div className="mt-2">
+                              <span className="text-xs font-medium">Campos personalizados:</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {Object.entries(log.mapped_data.custom_fields).map(([k, v]) => (
+                                  <Badge key={k} variant="outline" className="text-xs font-mono">
+                                    {k}: {String(v)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Mapping log - shows how each field was resolved */}
+                          {log.mapped_data?._mapping_log && (
+                            <div className="mt-3 border-t border-green-500/20 pt-2">
+                              <span className="text-xs font-medium text-green-700 dark:text-green-400">🔍 Detalhes do mapeamento:</span>
+                              <div className="space-y-1 mt-1">
+                                {Object.entries(log.mapped_data._mapping_log).map(([key, info]: [string, any]) => (
+                                  <div key={key} className="flex items-center gap-2 text-xs">
+                                    <code className="bg-background px-1 rounded font-mono">{key.startsWith('__fallback_') ? info.usedKey || 'auto' : key}</code>
+                                    <span className="text-muted-foreground">→</span>
+                                    <Badge variant={info.source === 'mapping' ? 'default' : 'secondary'} className="text-[10px]">
+                                      {info.target}
+                                    </Badge>
+                                    {info.error ? (
+                                      <span className="text-red-500">❌ {info.error}</span>
+                                    ) : (
+                                      <span className="text-green-600 dark:text-green-400 font-mono truncate max-w-[150px]">{info.value}</span>
+                                    )}
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {info.source === 'mapping' ? 'mapeado' : 'auto-detectado'}
+                                    </Badge>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Raw payload */}
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold">📦 Payload completo recebido:</Label>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText(JSON.stringify(log.request_body, null, 2));
+                              toast.success("Payload copiado");
+                            }}
+                          >
+                            <Copy className="h-3 w-3" />
+                            Copiar
+                          </Button>
+                        </div>
+                        <pre className="bg-background p-3 rounded-md text-xs overflow-auto max-h-[300px] border mt-2">
+                          {JSON.stringify(log.request_body, null, 2)}
+                        </pre>
                       </div>
-                      <pre className="bg-background p-3 rounded-md text-xs overflow-auto max-h-[300px] border">
-                        {JSON.stringify(log.request_body, null, 2)}
-                      </pre>
                       
                       {/* Field explorer */}
                       <div>
-                        <Label className="text-sm font-semibold">Campos detectados:</Label>
+                        <Label className="text-sm font-semibold">🏷️ Todos os campos do payload:</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Use estes nomes no mapeamento de campos ou como variáveis no título da negociação
+                        </p>
                         <div className="flex flex-wrap gap-1.5 mt-2">
                           {flattenKeys(log.request_body).map(key => (
-                            <Badge key={key} variant="outline" className="text-xs font-mono gap-1">
+                            <Badge 
+                              key={key} 
+                              variant="outline" 
+                              className="text-xs font-mono gap-1 cursor-pointer hover:bg-primary/10"
+                              onClick={() => {
+                                navigator.clipboard.writeText(key);
+                                toast.success(`Campo "${key}" copiado`);
+                              }}
+                            >
                               {key}: <span className="text-muted-foreground max-w-[120px] truncate inline-block align-bottom">{getNestedPreview(log.request_body, key)}</span>
                             </Badge>
                           ))}
