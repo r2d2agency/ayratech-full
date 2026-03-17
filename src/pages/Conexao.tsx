@@ -47,9 +47,13 @@ const Conexao = () => {
   const [creating, setCreating] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newConnectionName, setNewConnectionName] = useState("");
-  const [newConnectionProvider] = useState<'wapi'>('wapi');
+  const [newConnectionProvider, setNewConnectionProvider] = useState<'wapi' | 'meta'>('wapi');
   const [newConnectionInstanceId, setNewConnectionInstanceId] = useState("");
   const [newConnectionWapiToken, setNewConnectionWapiToken] = useState("");
+  const [newMetaToken, setNewMetaToken] = useState("");
+  const [newMetaPhoneNumberId, setNewMetaPhoneNumberId] = useState("");
+  const [newMetaWabaId, setNewMetaWabaId] = useState("");
+  const [validatingMeta, setValidatingMeta] = useState(false);
   const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
   
   // QR Code state
