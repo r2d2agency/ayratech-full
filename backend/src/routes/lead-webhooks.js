@@ -220,10 +220,12 @@ router.post('/receive/:token', async (req, res) => {
 
       // Create contact if phone provided
       if (cleanPhone) {
-        // Check if contact exists
+        // Find contact via contact_lists linked to org connections
         let contactResult = await query(
-          `SELECT id FROM contacts 
-           WHERE organization_id = $1 AND phone = $2
+          `SELECT c.id FROM contacts c
+           JOIN contact_lists cl ON cl.id = c.list_id
+           JOIN connections conn ON conn.id = cl.connection_id
+           WHERE conn.organization_id = $1 AND c.phone = $2
            LIMIT 1`,
           [webhook.organization_id, cleanPhone]
         );
@@ -232,12 +234,33 @@ router.post('/receive/:token', async (req, res) => {
         if (contactResult.rows.length > 0) {
           contactId = contactResult.rows[0].id;
         } else {
-          // Create contact with webhook name as source
+          // Find or create a contact list for the first active connection
+          const connForList = await query(
+            `SELECT id FROM connections WHERE organization_id = $1 AND status = 'connected' ORDER BY created_at ASC LIMIT 1`,
+            [webhook.organization_id]
+          );
+          let listId = null;
+          if (connForList.rows.length > 0) {
+            const listResult = await query(
+              `SELECT id FROM contact_lists WHERE connection_id = $1 LIMIT 1`,
+              [connForList.rows[0].id]
+            );
+            if (listResult.rows.length > 0) {
+              listId = listResult.rows[0].id;
+            } else {
+              const newList = await query(
+                `INSERT INTO contact_lists (name, connection_id) VALUES ('Contatos Salvos', $1) RETURNING id`,
+                [connForList.rows[0].id]
+              );
+              listId = newList.rows[0].id;
+            }
+          }
+
           const newContact = await query(
-            `INSERT INTO contacts (organization_id, name, phone, email, source)
+            `INSERT INTO contacts (list_id, name, phone, email, source)
              VALUES ($1, $2, $3, $4, $5)
              RETURNING id`,
-            [webhook.organization_id, mappedData.name, cleanPhone, mappedData.email, `Webhook: ${webhook.name}`]
+            [listId, mappedData.name, cleanPhone, mappedData.email, `Webhook: ${webhook.name}`]
           );
           contactId = newContact.rows[0].id;
         }
