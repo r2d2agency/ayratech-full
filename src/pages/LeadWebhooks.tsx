@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLeadWebhooks, useLeadWebhookMutations, useWebhookLogs, useWebhookDistribution, getWebhookUrl, LeadWebhook, WebhookLog } from "@/hooks/use-lead-webhooks";
-import { useCRMFunnels } from "@/hooks/use-crm";
+import { useCRMFunnels, useCRMFunnel } from "@/hooks/use-crm";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
@@ -70,6 +70,7 @@ function getNestedPreview(obj: any, path: string): string {
 export default function LeadWebhooks() {
   const { data: webhooks = [], isLoading } = useLeadWebhooks();
   const { data: funnels = [] } = useCRMFunnels();
+  // selectedFunnelData is loaded below after form state
   const { data: members = [] } = useQuery({
     queryKey: ["org-members-for-webhooks"],
     queryFn: async () => {
@@ -95,8 +96,8 @@ export default function LeadWebhooks() {
     default_probability: 10,
     field_mapping: {} as Record<string, string>,
   });
-
-  const selectedFunnel = funnels.find(f => f.id === form.funnel_id);
+  const { data: selectedFunnelData } = useCRMFunnel(form.funnel_id || null);
+  const selectedFunnel = selectedFunnelData;
 
   const handleCreate = () => {
     setEditingWebhook(null);
