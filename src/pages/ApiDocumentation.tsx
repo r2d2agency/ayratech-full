@@ -40,6 +40,10 @@ import {
   Zap,
   Activity,
   AlertCircle,
+  Settings,
+  Users,
+  UserPlus,
+  AlertTriangle,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
