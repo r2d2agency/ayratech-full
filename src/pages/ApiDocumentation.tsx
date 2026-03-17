@@ -1013,3 +1013,159 @@ function WebhookLogsPanel({
     </Dialog>
   );
 }
+
+function DistributionPanel({
+  webhookId,
+  webhook,
+  open,
+  onOpenChange,
+  members,
+  toggleDistribution,
+  addMember,
+  removeMember,
+}: {
+  webhookId: string | null;
+  webhook: LeadWebhook | null;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  members: Array<{ user_id: string; name: string; email: string; role: string }>;
+  toggleDistribution: any;
+  addMember: any;
+  removeMember: any;
+}) {
+  const { data: distribution, isLoading } = useWebhookDistribution(open ? webhookId : null);
+  const [selectedUserId, setSelectedUserId] = useState("");
+
+  const handleToggle = async (enabled: boolean) => {
+    if (!webhookId) return;
+    await toggleDistribution.mutateAsync({ id: webhookId, enabled });
+  };
+
+  const handleAddMember = async () => {
+    if (!webhookId || !selectedUserId) return;
+    await addMember.mutateAsync({ webhookId, userId: selectedUserId });
+    setSelectedUserId("");
+  };
+
+  const handleRemoveMember = async (userId: string) => {
+    if (!webhookId) return;
+    await removeMember.mutateAsync({ webhookId, userId });
+  };
+
+  const availableMembers = members.filter(
+    (m) => !distribution?.members?.some((dm: any) => dm.user_id === m.user_id)
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Distribuição de Leads (Round-Robin)
+          </DialogTitle>
+          <DialogDescription>
+            Distribua os leads automaticamente entre os vendedores. O lead aparece no CRM e no Chat do mesmo vendedor.
+          </DialogDescription>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+              <div>
+                <p className="font-medium text-sm">Distribuição automática</p>
+                <p className="text-xs text-muted-foreground">
+                  Quando ativado, os leads são distribuídos entre os membros abaixo
+                </p>
+              </div>
+              <Switch
+                checked={distribution?.distribution_enabled || false}
+                onCheckedChange={handleToggle}
+                disabled={toggleDistribution.isPending}
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Selecione um vendedor" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableMembers.length === 0 ? (
+                    <SelectItem value="" disabled>Todos já adicionados</SelectItem>
+                  ) : (
+                    availableMembers.map((member) => (
+                      <SelectItem key={member.user_id} value={member.user_id}>
+                        {member.name} ({member.role})
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleAddMember}
+                disabled={!selectedUserId || addMember.isPending}
+                className="gap-1"
+              >
+                <UserPlus className="h-4 w-4" />
+                Adicionar
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Membros da distribuição</Label>
+              {distribution?.members?.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm bg-muted/50 rounded-lg">
+                  Nenhum membro adicionado
+                </div>
+              ) : (
+                <ScrollArea className="max-h-[200px]">
+                  <div className="space-y-2">
+                    {distribution?.members?.map((member: any) => (
+                      <div
+                        key={member.user_id}
+                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">{member.user_name}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span>{member.user_email}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {member.leads_today} leads hoje
+                            </Badge>
+                            {!member.is_active && (
+                              <Badge variant="secondary">Pausado</Badge>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMember(member.user_id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </div>
+
+            {distribution?.distribution_enabled && distribution?.members?.length === 0 && (
+              <div className="flex items-center gap-2 p-3 bg-yellow-500/10 text-yellow-600 rounded-lg text-sm">
+                <AlertCircle className="h-4 w-4" />
+                Adicione membros para a distribuição funcionar
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
