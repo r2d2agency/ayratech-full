@@ -386,16 +386,29 @@ print(response.json())`;
                               </div>
 
                               {/* Meta info */}
-                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                {wh.funnel_name && (
-                                  <span className="flex items-center gap-1">
-                                    <ArrowRight className="h-3 w-3" />
+                              <div className="flex flex-wrap gap-3 text-xs text-muted-foreground items-center">
+                                {wh.funnel_name ? (
+                                  <Badge variant="outline" className="text-xs text-green-600 border-green-300">
                                     {wh.funnel_name} {wh.stage_name && `→ ${wh.stage_name}`}
-                                  </span>
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive" className="gap-1 text-xs">
+                                    <AlertTriangle className="h-3 w-3" />
+                                    Sem funil (Prospect)
+                                  </Badge>
+                                )}
+                                {wh.distribution_enabled && (
+                                  <Badge variant="secondary" className="gap-1 text-xs">
+                                    <Users className="h-3 w-3" />
+                                    Round-robin
+                                  </Badge>
+                                )}
+                                {!wh.distribution_enabled && wh.owner_name && (
+                                  <span>Responsável: {wh.owner_name}</span>
                                 )}
                                 <span className="flex items-center gap-1">
                                   <Activity className="h-3 w-3" />
-                                  {wh.total_leads} leads recebidos
+                                  {wh.total_leads} leads
                                 </span>
                                 {wh.last_lead_at && (
                                   <span>
@@ -406,7 +419,27 @@ print(response.json())`;
                             </div>
 
                             {/* Actions */}
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditToken(wh)}
+                                className="gap-1"
+                                title="Editar configurações"
+                              >
+                                <Settings className="h-3 w-3" />
+                                Editar
+                              </Button>
+                              <Button
+                                variant={wh.distribution_enabled ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => { setSelectedWebhookId(wh.id); setShowDistribution(true); }}
+                                className="gap-1"
+                                title="Distribuição round-robin"
+                              >
+                                <Users className="h-3 w-3" />
+                                Distribuição
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
