@@ -25,6 +25,11 @@ const router = express.Router();
     await query(`ALTER TABLE crm_deals ADD COLUMN IF NOT EXISTS source VARCHAR(255)`);
   } catch (_) {}
 
+  // Add deal_title_template column
+  try {
+    await query(`ALTER TABLE lead_webhooks ADD COLUMN IF NOT EXISTS deal_title_template VARCHAR(500) DEFAULT '{nome}'`);
+  } catch (_) {}
+
   logInfo('[Lead Webhooks] Self-healing columns check complete');
 })();
 
