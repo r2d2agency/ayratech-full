@@ -118,15 +118,40 @@ export default function ApiDocumentation() {
       return;
     }
     try {
-      await createWebhook.mutateAsync({
-        name: newToken.name,
-        description: newToken.description,
-        funnel_id: newToken.funnel_id || undefined,
-        stage_id: newToken.stage_id || undefined,
-      });
+      if (editingWebhook) {
+        await updateWebhook.mutateAsync({
+          id: editingWebhook.id,
+          name: newToken.name,
+          description: newToken.description,
+          funnel_id: newToken.funnel_id || undefined,
+          stage_id: newToken.stage_id || undefined,
+          owner_id: newToken.owner_id || undefined,
+        });
+      } else {
+        await createWebhook.mutateAsync({
+          name: newToken.name,
+          description: newToken.description,
+          funnel_id: newToken.funnel_id || undefined,
+          stage_id: newToken.stage_id || undefined,
+          owner_id: newToken.owner_id || undefined,
+        });
+      }
       setShowCreateDialog(false);
-      setNewToken({ name: "", description: "", funnel_id: "", stage_id: "" });
+      setEditingWebhook(null);
+      setNewToken({ name: "", description: "", funnel_id: "", stage_id: "", owner_id: "" });
     } catch {}
+  };
+
+  const handleEditToken = (wh: LeadWebhook) => {
+    setEditingWebhook(wh);
+    setNewToken({
+      name: wh.name,
+      description: wh.description || "",
+      funnel_id: wh.funnel_id || "",
+      stage_id: wh.stage_id || "",
+      owner_id: wh.owner_id || "",
+    });
+    setShowCreateDialog(true);
   };
 
   const handleCopyUrl = (token: string) => {
