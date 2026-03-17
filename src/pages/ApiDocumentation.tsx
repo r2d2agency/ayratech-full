@@ -13,8 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { useLeadWebhooks, useLeadWebhookMutations, useWebhookLogs, getWebhookUrl, LeadWebhook } from "@/hooks/use-lead-webhooks";
-import { useCRMFunnels } from "@/hooks/use-crm";
+import { useLeadWebhooks, useLeadWebhookMutations, useWebhookLogs, useWebhookDistribution, getWebhookUrl, LeadWebhook } from "@/hooks/use-lead-webhooks";
+import { useCRMFunnels, useCRMFunnel } from "@/hooks/use-crm";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import { toast } from "sonner";
 import {
   BookOpen,
