@@ -25,6 +25,11 @@ const router = express.Router();
     await query(`ALTER TABLE crm_deals ADD COLUMN IF NOT EXISTS source VARCHAR(255)`);
   } catch (_) {}
 
+  // Add deal_title_template column
+  try {
+    await query(`ALTER TABLE lead_webhooks ADD COLUMN IF NOT EXISTS deal_title_template VARCHAR(500) DEFAULT '{nome}'`);
+  } catch (_) {}
+
   logInfo('[Lead Webhooks] Self-healing columns check complete');
 })();
 
@@ -193,6 +198,16 @@ router.post('/receive/:token', async (req, res) => {
         }
       }
 
+      // Build deal title from template
+      const titleTemplate = webhook.deal_title_template || '{nome}';
+      const dealTitle = titleTemplate
+        .replace(/\{nome\}/gi, mappedData.name || 'Novo Lead')
+        .replace(/\{email\}/gi, mappedData.email || '')
+        .replace(/\{telefone\}/gi, cleanPhone || '')
+        .replace(/\{empresa\}/gi, mappedData.company_name || '')
+        .replace(/\{valor\}/gi, String(mappedData.value || 0))
+        .trim() || mappedData.name || 'Novo Lead';
+
       // Create deal with source tracking
       const dealResult = await query(
         `INSERT INTO crm_deals (
@@ -206,7 +221,7 @@ router.post('/receive/:token', async (req, res) => {
           webhook.funnel_id,
           webhook.stage_id,
           companyId,
-          `Lead: ${mappedData.name}`,
+          dealTitle,
           mappedData.value || 0,
           webhook.default_probability || 10,
           description,
@@ -499,7 +514,8 @@ router.post('/', async (req, res) => {
       owner_id, 
       field_mapping,
       default_value,
-      default_probability 
+      default_probability,
+      deal_title_template
     } = req.body;
 
     if (!name) {
@@ -513,8 +529,8 @@ router.post('/', async (req, res) => {
       `INSERT INTO lead_webhooks (
          organization_id, name, description, webhook_token,
          funnel_id, stage_id, owner_id, field_mapping,
-         default_value, default_probability, created_by
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         default_value, default_probability, deal_title_template, created_by
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         org.organization_id,
@@ -527,6 +543,7 @@ router.post('/', async (req, res) => {
         JSON.stringify(field_mapping || {}),
         default_value || 0,
         default_probability || 10,
+        deal_title_template || '{nome}',
         req.userId
       ]
     );
@@ -556,7 +573,8 @@ router.put('/:id', async (req, res) => {
       owner_id, 
       field_mapping,
       default_value,
-      default_probability 
+      default_probability,
+      deal_title_template
     } = req.body;
 
     const result = await query(
@@ -570,8 +588,9 @@ router.put('/:id', async (req, res) => {
          field_mapping = COALESCE($7, field_mapping),
          default_value = COALESCE($8, default_value),
          default_probability = COALESCE($9, default_probability),
+         deal_title_template = COALESCE($10, deal_title_template),
          updated_at = NOW()
-       WHERE id = $10 AND organization_id = $11
+       WHERE id = $11 AND organization_id = $12
        RETURNING *`,
       [
         name,
@@ -583,6 +602,7 @@ router.put('/:id', async (req, res) => {
         field_mapping ? JSON.stringify(field_mapping) : null,
         default_value,
         default_probability,
+        deal_title_template || null,
         id,
         org.organization_id
       ]

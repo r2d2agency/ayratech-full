@@ -13,6 +13,7 @@ export interface LeadWebhook {
   owner_id?: string;
   distribution_enabled: boolean;
   field_mapping: Record<string, string>;
+  deal_title_template?: string;
   default_value: number;
   default_probability: number;
   total_leads: number;

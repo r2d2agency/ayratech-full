@@ -94,6 +94,7 @@ export default function LeadWebhooks() {
     owner_id: "",
     default_value: 0,
     default_probability: 10,
+    deal_title_template: "{nome}",
     field_mapping: {} as Record<string, string>,
   });
   const { data: selectedFunnelData } = useCRMFunnel(form.funnel_id || null);
@@ -109,6 +110,7 @@ export default function LeadWebhooks() {
       owner_id: "",
       default_value: 0,
       default_probability: 10,
+      deal_title_template: "{nome}",
       field_mapping: {},
     });
     setShowEditor(true);
@@ -124,6 +126,7 @@ export default function LeadWebhooks() {
       owner_id: webhook.owner_id || "",
       default_value: webhook.default_value,
       default_probability: webhook.default_probability,
+      deal_title_template: webhook.deal_title_template || "{nome}",
       field_mapping: webhook.field_mapping || {},
     });
     setShowEditor(true);
@@ -536,6 +539,20 @@ Content-Type: application/json
                       onChange={(e) => setForm({ ...form, default_probability: Number(e.target.value) })}
                     />
                   </div>
+                </div>
+
+                {/* Deal Title Template */}
+                <div className="space-y-2">
+                  <Label htmlFor="deal_title_template">📝 Título da Negociação</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Use variáveis: <code className="bg-muted px-1 rounded">{'{nome}'}</code>, <code className="bg-muted px-1 rounded">{'{email}'}</code>, <code className="bg-muted px-1 rounded">{'{telefone}'}</code>, <code className="bg-muted px-1 rounded">{'{empresa}'}</code>, <code className="bg-muted px-1 rounded">{'{valor}'}</code>. Ex: <code className="bg-muted px-1 rounded">{'{nome}'} | Orçamento</code>
+                  </p>
+                  <Input
+                    id="deal_title_template"
+                    placeholder="{nome}"
+                    value={form.deal_title_template}
+                    onChange={(e) => setForm({ ...form, deal_title_template: e.target.value })}
+                  />
                 </div>
 
                 {editingWebhook && (
