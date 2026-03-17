@@ -944,10 +944,12 @@ const handleGetQRCode = async (connection: Connection) => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{connection.name}</CardTitle>
                     <Badge 
-                      variant={connection.status === 'connected' ? 'default' : 'outline'}
-                      className={connection.status === 'connected' ? 'bg-green-500' : ''}
+                      variant={connection.status === 'connected' || connection.provider === 'meta' ? 'default' : 'outline'}
+                      className={connection.status === 'connected' || connection.provider === 'meta' ? 'bg-green-500' : ''}
                     >
-                      {connection.status === 'connected' ? (
+                      {connection.provider === 'meta' ? (
+                        <><Wifi className="h-3 w-3 mr-1" /> Meta API</>
+                      ) : connection.status === 'connected' ? (
                         <><Wifi className="h-3 w-3 mr-1" /> Conectado</>
                       ) : (
                         <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>
@@ -955,9 +957,11 @@ const handleGetQRCode = async (connection: Connection) => {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs truncate">
-                    {(connection.provider === 'wapi' || !!connection.instance_id)
-                      ? (connection.instance_id || 'W-API')
-                      : (connection.instance_name || '')}
+                    {connection.provider === 'meta'
+                      ? `WABA: ${connection.meta_waba_id || ''}`
+                      : (connection.provider === 'wapi' || !!connection.instance_id)
+                        ? (connection.instance_id || 'W-API')
+                        : (connection.instance_name || '')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
