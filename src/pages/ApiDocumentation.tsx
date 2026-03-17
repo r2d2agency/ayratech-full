@@ -318,7 +318,7 @@ print(response.json())`;
                         Crie seu primeiro token para começar a receber leads via API
                       </p>
                     </div>
-                    <Button onClick={() => setShowCreateDialog(true)} variant="outline" className="gap-2">
+            <Button onClick={() => { setEditingWebhook(null); setNewToken({ name: "", description: "", funnel_id: "", stage_id: "", owner_id: "" }); setShowCreateDialog(true); }} variant="outline" className="gap-2">
                       <Plus className="h-4 w-4" />
                       Criar Primeiro Token
                     </Button>
