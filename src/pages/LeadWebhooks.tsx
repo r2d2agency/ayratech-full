@@ -110,6 +110,7 @@ export default function LeadWebhooks() {
       owner_id: "",
       default_value: 0,
       default_probability: 10,
+      deal_title_template: "{nome}",
       field_mapping: {},
     });
     setShowEditor(true);
