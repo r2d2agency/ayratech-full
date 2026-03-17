@@ -247,13 +247,24 @@ router.post('/receive/:token', async (req, res) => {
 
       // Build deal title from template
       const titleTemplate = webhook.deal_title_template || '{nome}';
-      const dealTitle = titleTemplate
+      let dealTitle = titleTemplate
         .replace(/\{nome\}/gi, mappedData.name || 'Novo Lead')
         .replace(/\{email\}/gi, mappedData.email || '')
         .replace(/\{telefone\}/gi, cleanPhone || '')
         .replace(/\{empresa\}/gi, mappedData.company_name || '')
-        .replace(/\{valor\}/gi, String(mappedData.value || 0))
-        .trim() || mappedData.name || 'Novo Lead';
+        .replace(/\{valor\}/gi, String(mappedData.value || 0));
+      
+      // Replace custom field variables like {custom_fields.novo_campo} or {novo_campo}
+      if (mappedData.custom_fields && typeof mappedData.custom_fields === 'object') {
+        for (const [cfKey, cfValue] of Object.entries(mappedData.custom_fields)) {
+          const regex1 = new RegExp(`\\{custom_fields\\.${cfKey}\\}`, 'gi');
+          const regex2 = new RegExp(`\\{${cfKey}\\}`, 'gi');
+          dealTitle = dealTitle.replace(regex1, String(cfValue || ''));
+          dealTitle = dealTitle.replace(regex2, String(cfValue || ''));
+        }
+      }
+      
+      dealTitle = dealTitle.trim() || mappedData.name || 'Novo Lead';
 
       // Create deal with source tracking
       const dealResult = await query(
