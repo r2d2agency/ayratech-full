@@ -198,6 +198,16 @@ router.post('/receive/:token', async (req, res) => {
         }
       }
 
+      // Build deal title from template
+      const titleTemplate = webhook.deal_title_template || '{nome}';
+      const dealTitle = titleTemplate
+        .replace(/\{nome\}/gi, mappedData.name || 'Novo Lead')
+        .replace(/\{email\}/gi, mappedData.email || '')
+        .replace(/\{telefone\}/gi, cleanPhone || '')
+        .replace(/\{empresa\}/gi, mappedData.company_name || '')
+        .replace(/\{valor\}/gi, String(mappedData.value || 0))
+        .trim() || mappedData.name || 'Novo Lead';
+
       // Create deal with source tracking
       const dealResult = await query(
         `INSERT INTO crm_deals (
@@ -211,7 +221,7 @@ router.post('/receive/:token', async (req, res) => {
           webhook.funnel_id,
           webhook.stage_id,
           companyId,
-          `Lead: ${mappedData.name}`,
+          dealTitle,
           mappedData.value || 0,
           webhook.default_probability || 10,
           description,
