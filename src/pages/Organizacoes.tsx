@@ -153,6 +153,7 @@ export default function Organizacoes() {
   const [gleegoFunnelId, setGleegoFunnelId] = useState('');
   const [gleegoStageId, setGleegoStageId] = useState('');
   const [gleegoWebhookId, setGleegoWebhookId] = useState('');
+  const [gleegoDealTitleTemplate, setGleegoDealTitleTemplate] = useState('{nome}');
   const [gleegoFunnels, setGleegoFunnels] = useState<Array<{id: string; name: string; stages?: Array<{id: string; name: string}>}>>([]);
   const [gleegoWebhooks, setGleegoWebhooks] = useState<Array<{id: string; name: string; distribution_enabled: boolean}>>([]);
   const [savingModules, setSavingModules] = useState(false);
@@ -257,6 +258,7 @@ export default function Organizacoes() {
       setGleegoFunnelId(settings.lead_gleego_funnel_id || '');
       setGleegoStageId(settings.lead_gleego_stage_id || '');
       setGleegoWebhookId(settings.lead_gleego_webhook_id || '');
+      setGleegoDealTitleTemplate(settings.lead_gleego_deal_title_template || '{nome}');
     } catch {
       // ignore
     }
@@ -385,6 +387,7 @@ export default function Organizacoes() {
       body.lead_gleego_funnel_id = gleegoFunnelId || null;
       body.lead_gleego_stage_id = gleegoStageId || null;
       body.lead_gleego_webhook_id = (gleegoWebhookId && gleegoWebhookId !== 'none') ? gleegoWebhookId : null;
+      body.lead_gleego_deal_title_template = gleegoDealTitleTemplate || '{nome}';
 
       await api('/api/lead-gleego/settings', { method: 'PUT', body });
       toast.success('Configurações do Lead Gleego salvas!');
@@ -1526,6 +1529,19 @@ export default function Organizacoes() {
                                     ))}
                                   </SelectContent>
                                 </Select>
+                              </div>
+
+                              {/* Deal Title Template */}
+                              <div className="space-y-3 pt-3 border-t border-border/50">
+                                <p className="text-sm font-medium">📝 Título da Negociação</p>
+                                <p className="text-xs text-muted-foreground">
+                                  Use variáveis como <code className="bg-muted px-1 rounded">{'{nome}'}</code>, <code className="bg-muted px-1 rounded">{'{email}'}</code>, <code className="bg-muted px-1 rounded">{'{telefone}'}</code>, <code className="bg-muted px-1 rounded">{'{empresa}'}</code>. Ex: <code className="bg-muted px-1 rounded">{'{nome}'} | Orçamento</code>
+                                </p>
+                                <Input
+                                  placeholder="{nome}"
+                                  value={gleegoDealTitleTemplate}
+                                  onChange={(e) => setGleegoDealTitleTemplate(e.target.value)}
+                                />
                               </div>
 
                               <Button onClick={handleSaveLeadGleegoSettings} size="sm" className="w-full">

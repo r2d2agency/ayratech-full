@@ -64,6 +64,7 @@ router.post('/receive', async (req, res) => {
     const stageId = settings.lead_gleego_stage_id;
     const distributionWebhookId = settings.lead_gleego_webhook_id; // optional: reuse webhook distribution
     const defaultOwnerId = settings.lead_gleego_owner_id;
+    const dealTitleTemplate = settings.lead_gleego_deal_title_template || '{nome}';
 
     // Extract lead data with common field names
     const mappedData = {
@@ -214,6 +215,15 @@ router.post('/receive', async (req, res) => {
 
       const description = buildDescription(mappedData, payload);
 
+      // Build deal title from template
+      const dealTitle = dealTitleTemplate
+        .replace(/\{nome\}/gi, mappedData.name || 'Novo Lead')
+        .replace(/\{email\}/gi, mappedData.email || '')
+        .replace(/\{telefone\}/gi, cleanPhone || '')
+        .replace(/\{empresa\}/gi, mappedData.company_name || '')
+        .replace(/\{valor\}/gi, String(mappedData.value || 0))
+        .trim() || mappedData.name || 'Novo Lead';
+
       // Create deal
       const dealResult = await query(
         `INSERT INTO crm_deals (
@@ -224,7 +234,7 @@ router.post('/receive', async (req, res) => {
          RETURNING id`,
         [
           org.id, funnelId, stageId, companyId,
-          mappedData.name || 'Novo Lead',
+          dealTitle,
           mappedData.value,
           description,
           assignedOwnerId
@@ -274,7 +284,7 @@ router.post('/receive', async (req, res) => {
             }
           }
           const newContact = await query(
-            `INSERT INTO contacts (list_id, name, phone, email, source) VALUES ($1, $2, $3, $4, 'FormGleego') RETURNING id`,
+            `INSERT INTO contacts (list_id, name, phone, email, source) VALUES ($1, $2, $3, $4, 'form_gleego') RETURNING id`,
             [listId, mappedData.name, cleanPhone, mappedData.email]
           );
           contactId = newContact.rows[0].id;
@@ -423,7 +433,7 @@ router.get('/settings', async (req, res) => {
 // PUT save API key (admin/owner only)
 router.put('/settings', async (req, res) => {
   try {
-    const { lead_gleego_api_key, lead_gleego_funnel_id, lead_gleego_stage_id, lead_gleego_webhook_id, lead_gleego_owner_id, lead_gleego_field_mapping } = req.body;
+    const { lead_gleego_api_key, lead_gleego_funnel_id, lead_gleego_stage_id, lead_gleego_webhook_id, lead_gleego_owner_id, lead_gleego_field_mapping, lead_gleego_deal_title_template } = req.body;
 
     const orgResult = await query(
       `SELECT om.role, o.id
@@ -449,6 +459,7 @@ router.put('/settings', async (req, res) => {
     if (lead_gleego_webhook_id !== undefined) updateObj.lead_gleego_webhook_id = lead_gleego_webhook_id;
     if (lead_gleego_owner_id !== undefined) updateObj.lead_gleego_owner_id = lead_gleego_owner_id;
     if (lead_gleego_field_mapping !== undefined) updateObj.lead_gleego_field_mapping = lead_gleego_field_mapping;
+    if (lead_gleego_deal_title_template !== undefined) updateObj.lead_gleego_deal_title_template = lead_gleego_deal_title_template;
 
     await query(
       `UPDATE organizations 
