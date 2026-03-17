@@ -423,7 +423,7 @@ router.get('/settings', async (req, res) => {
 // PUT save API key (admin/owner only)
 router.put('/settings', async (req, res) => {
   try {
-    const { lead_gleego_api_key, lead_gleego_funnel_id, lead_gleego_stage_id, lead_gleego_webhook_id, lead_gleego_owner_id, lead_gleego_field_mapping } = req.body;
+    const { lead_gleego_api_key, lead_gleego_funnel_id, lead_gleego_stage_id, lead_gleego_webhook_id, lead_gleego_owner_id, lead_gleego_field_mapping, lead_gleego_deal_title_template } = req.body;
 
     const orgResult = await query(
       `SELECT om.role, o.id
