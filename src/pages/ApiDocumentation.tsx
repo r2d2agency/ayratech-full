@@ -76,21 +76,32 @@ export default function ApiDocumentation() {
   const { isAuthenticated } = useAuth();
   const { data: webhooks = [], isLoading } = useLeadWebhooks();
   const { data: funnels = [] } = useCRMFunnels();
-  const { createWebhook, deleteWebhook, regenerateToken } = useLeadWebhookMutations();
+  const { data: members = [] } = useQuery({
+    queryKey: ["org-members-for-api-tokens"],
+    queryFn: async () => {
+      const response = await api<{ members: Array<{ user_id: string; name: string; email: string; role: string }> }>("/api/organizations/current");
+      return response.members || [];
+    },
+    enabled: isAuthenticated,
+  });
+  const { createWebhook, updateWebhook, deleteWebhook, regenerateToken, toggleDistribution, addDistributionMember, removeDistributionMember } = useLeadWebhookMutations();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showLogsDialog, setShowLogsDialog] = useState(false);
+  const [showDistribution, setShowDistribution] = useState(false);
   const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null);
+  const [editingWebhook, setEditingWebhook] = useState<LeadWebhook | null>(null);
   const [visibleTokens, setVisibleTokens] = useState<Set<string>>(new Set());
   const [newToken, setNewToken] = useState({
     name: "",
     description: "",
     funnel_id: "",
     stage_id: "",
+    owner_id: "",
   });
 
-  const selectedFunnel = funnels.find((f: any) => f.id === newToken.funnel_id);
-  const stages = selectedFunnel?.stages || [];
+  const { data: selectedFunnelData } = useCRMFunnel(newToken.funnel_id || null);
+  const stages = selectedFunnelData?.stages || [];
 
   const toggleTokenVisibility = (id: string) => {
     setVisibleTokens((prev) => {
