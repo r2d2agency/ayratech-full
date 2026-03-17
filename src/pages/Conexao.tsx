@@ -23,12 +23,14 @@ import { useAuth } from "@/contexts/AuthContext";
 interface Connection {
   id: string;
   name: string;
-  provider?: 'evolution' | 'wapi';
+  provider?: 'evolution' | 'wapi' | 'meta';
   instance_name: string;
   instance_id?: string;
   status: string;
   phone_number?: string;
   show_groups?: boolean;
+  meta_phone_number_id?: string;
+  meta_waba_id?: string;
   created_at: string;
 }
 
@@ -45,9 +47,13 @@ const Conexao = () => {
   const [creating, setCreating] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newConnectionName, setNewConnectionName] = useState("");
-  const [newConnectionProvider] = useState<'wapi'>('wapi');
+  const [newConnectionProvider, setNewConnectionProvider] = useState<'wapi' | 'meta'>('wapi');
   const [newConnectionInstanceId, setNewConnectionInstanceId] = useState("");
   const [newConnectionWapiToken, setNewConnectionWapiToken] = useState("");
+  const [newMetaToken, setNewMetaToken] = useState("");
+  const [newMetaPhoneNumberId, setNewMetaPhoneNumberId] = useState("");
+  const [newMetaWabaId, setNewMetaWabaId] = useState("");
+  const [validatingMeta, setValidatingMeta] = useState(false);
   const [planLimits, setPlanLimits] = useState<PlanLimits | null>(null);
   
   // QR Code state
@@ -159,6 +165,10 @@ const Conexao = () => {
     setNewConnectionName('');
     setNewConnectionInstanceId('');
     setNewConnectionWapiToken('');
+    setNewConnectionProvider('wapi');
+    setNewMetaToken('');
+    setNewMetaPhoneNumberId('');
+    setNewMetaWabaId('');
   };
 
   const handleCreateConnection = async () => {
@@ -167,22 +177,41 @@ const Conexao = () => {
       return;
     }
 
+    if (newConnectionProvider === 'meta') {
+      if (!newMetaToken.trim() || !newMetaPhoneNumberId.trim() || !newMetaWabaId.trim()) {
+        toast.error('Token, Phone Number ID e WABA ID são obrigatórios');
+        return;
+      }
+    }
+
     setCreating(true);
     try {
       let result: Connection & { qrCode?: string };
 
-      // Create W-API connection - instance is auto-created using org token
-      result = await api<Connection>('/api/connections', {
-        method: 'POST',
-        body: {
-          provider: 'wapi',
-          name: newConnectionName,
-        },
-      });
-      toast.success('Conexão criada! Instância W-API gerada automaticamente.');
-      // Auto-open QR code dialog
-      setSelectedConnection(result);
-      handleGetQRCode(result);
+      if (newConnectionProvider === 'meta') {
+        result = await api<Connection>('/api/connections', {
+          method: 'POST',
+          body: {
+            provider: 'meta',
+            name: newConnectionName,
+            meta_token: newMetaToken,
+            meta_phone_number_id: newMetaPhoneNumberId,
+            meta_waba_id: newMetaWabaId,
+          },
+        });
+        toast.success('Conexão Meta API criada com sucesso!');
+      } else {
+        result = await api<Connection>('/api/connections', {
+          method: 'POST',
+          body: {
+            provider: 'wapi',
+            name: newConnectionName,
+          },
+        });
+        toast.success('Conexão criada! Instância W-API gerada automaticamente.');
+        setSelectedConnection(result);
+        handleGetQRCode(result);
+      }
 
       setConnections(prev => [...prev, result]);
       setShowCreateDialog(false);
@@ -192,6 +221,29 @@ const Conexao = () => {
       toast.error(error.message || 'Erro ao criar conexão', { duration: 8000 });
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleValidateMetaToken = async () => {
+    if (!newMetaToken.trim() || !newMetaWabaId.trim()) {
+      toast.error('Preencha o Token e WABA ID para validar');
+      return;
+    }
+    setValidatingMeta(true);
+    try {
+      const result = await api<{ valid: boolean; error?: string; account?: any }>('/api/meta/validate', {
+        method: 'POST',
+        body: { token: newMetaToken, waba_id: newMetaWabaId },
+      });
+      if (result.valid) {
+        toast.success(`Token válido! Conta: ${result.account?.name || 'OK'}`);
+      } else {
+        toast.error(result.error || 'Token inválido');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao validar');
+    } finally {
+      setValidatingMeta(false);
     }
   };
 
@@ -764,10 +816,24 @@ const handleGetQRCode = async (connection: Connection) => {
               <DialogHeader>
                 <DialogTitle>Nova Conexão WhatsApp</DialogTitle>
                 <DialogDescription>
-                  A instância W-API será criada automaticamente.
+                  Escolha o tipo de conexão e preencha os dados.
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
+                {/* Provider Selection */}
+                <div className="space-y-2">
+                  <Label>Tipo de Conexão</Label>
+                  <Select value={newConnectionProvider} onValueChange={(v: 'wapi' | 'meta') => setNewConnectionProvider(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wapi">W-API (WhatsApp não-oficial)</SelectItem>
+                      <SelectItem value="meta">Meta Cloud API (Oficial)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
                 {/* Connection Name */}
                 <div className="space-y-2">
                   <Label>Nome da Conexão</Label>
@@ -778,11 +844,57 @@ const handleGetQRCode = async (connection: Connection) => {
                   />
                 </div>
 
-                <div className="rounded-lg border border-dashed p-3 bg-muted/30">
-                  <p className="text-xs text-muted-foreground">
-                    💡 A instância será criada automaticamente usando o token W-API configurado nas <strong>Configurações da Organização</strong>.
-                  </p>
-                </div>
+                {newConnectionProvider === 'wapi' ? (
+                  <div className="rounded-lg border border-dashed p-3 bg-muted/30">
+                    <p className="text-xs text-muted-foreground">
+                      💡 A instância será criada automaticamente usando o token W-API configurado nas <strong>Configurações da Organização</strong>.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Token de Acesso Permanente</Label>
+                      <Input 
+                        placeholder="EAAxxxxxxx..."
+                        value={newMetaToken}
+                        onChange={(e) => setNewMetaToken(e.target.value)}
+                        type="password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone Number ID</Label>
+                      <Input 
+                        placeholder="Ex: 123456789012345"
+                        value={newMetaPhoneNumberId}
+                        onChange={(e) => setNewMetaPhoneNumberId(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>WhatsApp Business Account ID (WABA ID)</Label>
+                      <Input 
+                        placeholder="Ex: 123456789012345"
+                        value={newMetaWabaId}
+                        onChange={(e) => setNewMetaWabaId(e.target.value)}
+                      />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleValidateMetaToken}
+                      disabled={validatingMeta || !newMetaToken || !newMetaWabaId}
+                      className="w-full"
+                    >
+                      {validatingMeta ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <CheckCircle className="h-4 w-4 mr-1" />}
+                      Validar Credenciais
+                    </Button>
+                    <div className="rounded-lg border border-dashed p-3 bg-muted/30">
+                      <p className="text-xs text-muted-foreground">
+                        💡 Obtenha estas credenciais no <strong>Meta Business Suite</strong> → Configurações → API do WhatsApp.
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => { setShowCreateDialog(false); resetCreateForm(); }}>
@@ -832,10 +944,12 @@ const handleGetQRCode = async (connection: Connection) => {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{connection.name}</CardTitle>
                     <Badge 
-                      variant={connection.status === 'connected' ? 'default' : 'outline'}
-                      className={connection.status === 'connected' ? 'bg-green-500' : ''}
+                      variant={connection.status === 'connected' || connection.provider === 'meta' ? 'default' : 'outline'}
+                      className={connection.status === 'connected' || connection.provider === 'meta' ? 'bg-green-500' : ''}
                     >
-                      {connection.status === 'connected' ? (
+                      {connection.provider === 'meta' ? (
+                        <><Wifi className="h-3 w-3 mr-1" /> Meta API</>
+                      ) : connection.status === 'connected' ? (
                         <><Wifi className="h-3 w-3 mr-1" /> Conectado</>
                       ) : (
                         <><WifiOff className="h-3 w-3 mr-1" /> Desconectado</>
@@ -843,9 +957,11 @@ const handleGetQRCode = async (connection: Connection) => {
                     </Badge>
                   </div>
                   <CardDescription className="text-xs truncate">
-                    {(connection.provider === 'wapi' || !!connection.instance_id)
-                      ? (connection.instance_id || 'W-API')
-                      : (connection.instance_name || '')}
+                    {connection.provider === 'meta'
+                      ? `WABA: ${connection.meta_waba_id || ''}`
+                      : (connection.provider === 'wapi' || !!connection.instance_id)
+                        ? (connection.instance_id || 'W-API')
+                        : (connection.instance_name || '')}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -859,17 +975,22 @@ const handleGetQRCode = async (connection: Connection) => {
                     </div>
                     <div className="flex items-center gap-1.5 p-2 rounded bg-muted/50">
                       <Badge variant="outline" className="text-[10px] px-1.5">
-                        {(connection.provider === 'wapi' || !!connection.instance_id) ? 'W-API' : 'Evolution'}
+                        {connection.provider === 'meta' 
+                          ? 'Meta API'
+                          : (connection.provider === 'wapi' || !!connection.instance_id) ? 'W-API' : 'Evolution'}
                       </Badge>
                       <code className="text-[10px] truncate flex-1">
-                        {(connection.provider === 'wapi' || !!connection.instance_id) 
-                          ? connection.instance_id 
-                          : connection.instance_name}
+                        {connection.provider === 'meta'
+                          ? connection.meta_phone_number_id
+                          : (connection.provider === 'wapi' || !!connection.instance_id) 
+                            ? connection.instance_id 
+                            : connection.instance_name}
                       </code>
                     </div>
                   </div>
 
-                  {/* Groups Toggle */}
+                  {/* Groups Toggle - not for Meta */}
+                  {connection.provider !== 'meta' && (
                   <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/30">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-muted-foreground" />
@@ -896,6 +1017,7 @@ const handleGetQRCode = async (connection: Connection) => {
                       }}
                     />
                   </div>
+                  )}
 
                   {/* Lead Distribution Button */}
                   <div 

@@ -46,6 +46,7 @@ router.get('/', async (req, res) => {
 
     const connQuery = `SELECT c.*, u.name as created_by_name,
        CASE 
+          WHEN c.provider = 'meta' THEN 'meta'
           WHEN c.instance_id IS NOT NULL THEN 'wapi'
           WHEN c.provider IS NOT NULL THEN c.provider 
           ELSE 'evolution'
@@ -160,7 +161,10 @@ router.post('/', async (req, res) => {
       instance_name, 
       instance_id,
       wapi_token,
-      name 
+      name,
+      meta_token,
+      meta_phone_number_id,
+      meta_waba_id,
     } = req.body;
 
     const org = await getUserOrganization(req.userId);
@@ -172,7 +176,6 @@ router.post('/', async (req, res) => {
     // For W-API: get token from org if not provided
     let resolvedToken = wapi_token || null;
     if (provider === 'wapi' && !resolvedToken) {
-      // Fetch global W-API token from system_settings (configured by superadmin)
       const settingResult = await query(
         `SELECT value FROM system_settings WHERE key = 'wapi_token'`
       );
@@ -180,7 +183,11 @@ router.post('/', async (req, res) => {
     }
 
     // Validate based on provider
-    if (provider === 'wapi') {
+    if (provider === 'meta') {
+      if (!meta_token || !meta_phone_number_id || !meta_waba_id) {
+        return res.status(400).json({ error: 'Token, Phone Number ID e WABA ID são obrigatórios para conexão Meta' });
+      }
+    } else if (provider === 'wapi') {
       if (!resolvedToken) {
         return res.status(400).json({ error: 'Token W-API não configurado. Peça ao administrador para configurar o token no painel Superadmin.' });
       }
@@ -233,8 +240,8 @@ router.post('/', async (req, res) => {
     }
 
     const result = await query(
-      `INSERT INTO connections (user_id, organization_id, provider, api_url, api_key, instance_name, instance_id, wapi_token, name)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      `INSERT INTO connections (user_id, organization_id, provider, api_url, api_key, instance_name, instance_id, wapi_token, name, meta_token, meta_phone_number_id, meta_waba_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
       [
         req.userId, 
         org?.organization_id || null, 
@@ -244,7 +251,10 @@ router.post('/', async (req, res) => {
         instance_name || null,
         finalInstanceId,
         finalToken,
-        name.trim()
+        name.trim(),
+        meta_token || null,
+        meta_phone_number_id || null,
+        meta_waba_id || null,
       ]
     );
 

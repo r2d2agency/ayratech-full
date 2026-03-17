@@ -37,6 +37,7 @@ export const PAGE_PERMISSIONS = [
   
   // Minha Conta
   { key: 'ajustes', label: 'Ajustes', section: 'Minha Conta', icon: 'Settings' },
+  { key: 'meta_templates', label: 'Templates Meta', section: 'Minha Conta', icon: 'FileText' },
   
   // Administração
   { key: 'cobranca', label: 'Cobrança', section: 'Administração', icon: 'Receipt' },
