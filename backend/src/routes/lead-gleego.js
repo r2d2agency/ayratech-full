@@ -372,7 +372,12 @@ router.post('/receive', async (req, res) => {
 
     log(`[Lead Gleego] Successfully processed lead`, { dealId, prospectId });
 
-    res.json({ success: true, message: responseMessage, deal_id: dealId, prospect_id: prospectId });
+    const response = { success: true, message: responseMessage, deal_id: dealId, prospect_id: prospectId };
+    if (unmappedFields.length > 0) {
+      response.unmapped_fields = unmappedFields;
+      response.warning = `${unmappedFields.length} campo(s) não mapeado(s): ${unmappedFields.join(', ')}`;
+    }
+    res.json(response);
   } catch (error) {
     logError('[Lead Gleego] Error processing lead', error);
     res.status(500).json({ error: 'Erro ao processar lead', details: error.message });
