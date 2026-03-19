@@ -40,6 +40,8 @@ import CRMConfiguracoes from "./pages/CRMConfiguracoes";
 import CRMRelatorios from "./pages/CRMRelatorios";
 import Mapa from "./pages/Mapa";
 import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
+import TermosServico from "./pages/TermosServico";
+import ExclusaoDados from "./pages/ExclusaoDados";
 import FluxosExternos from "./pages/FluxosExternos";
 import PublicFormPage from "./pages/PublicFormPage";
 import LeadWebhooks from "./pages/LeadWebhooks";
@@ -154,6 +156,8 @@ const App = () => (
             <Route path="/api-docs" element={<ApiDocumentation />} />
             <Route path="/f/:slug" element={<PublicFormPage />} />
             <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
+            <Route path="/termos-servico" element={<TermosServico />} />
+            <Route path="/exclusao-dados" element={<ExclusaoDados />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
