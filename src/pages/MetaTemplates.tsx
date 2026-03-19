@@ -258,6 +258,10 @@ const MetaTemplates = () => {
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-1 hidden sm:inline">Sincronizar</span>
             </Button>
+            <Button variant="outline" onClick={() => setPresetDialogOpen(true)}>
+              <BookTemplate className="h-4 w-4" />
+              <span className="ml-1 hidden sm:inline">Modelos Prontos</span>
+            </Button>
             <Button variant="gradient" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               <span className="ml-1">Novo Template</span>
