@@ -8,10 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, RefreshCw, Loader2, FileText, Trash2, CheckCircle, Clock, XCircle, AlertTriangle, MessageSquare } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Plus, RefreshCw, Loader2, FileText, Trash2, CheckCircle, Clock, XCircle, AlertTriangle, MessageSquare, BookTemplate, ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-
+import { META_TEMPLATE_SEGMENTS, MetaTemplatePreset } from "@/components/meta-templates/meta-template-presets";
 interface MetaConnection {
   id: string;
   name: string;
@@ -61,6 +62,8 @@ const MetaTemplates = () => {
   const [syncing, setSyncing] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+  const [presetDialogOpen, setPresetDialogOpen] = useState(false);
+
   // Create form state
   const [newName, setNewName] = useState("");
   const [newLanguage, setNewLanguage] = useState("pt_BR");
@@ -69,6 +72,18 @@ const MetaTemplates = () => {
   const [newBodyText, setNewBodyText] = useState("");
   const [newFooterText, setNewFooterText] = useState("");
   const [creating, setCreating] = useState(false);
+
+  const applyPreset = (preset: MetaTemplatePreset) => {
+    setNewName(preset.name);
+    setNewBodyText(preset.bodyText);
+    setNewHeaderText(preset.headerText || "");
+    setNewFooterText(preset.footerText || "");
+    setNewCategory(preset.category);
+    setNewLanguage(preset.language);
+    setPresetDialogOpen(false);
+    setCreateDialogOpen(true);
+    toast.success(`Modelo "${preset.displayName}" carregado. Edite e envie para aprovação.`);
+  };
 
   useEffect(() => {
     loadMetaConnections();
@@ -243,6 +258,10 @@ const MetaTemplates = () => {
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-1 hidden sm:inline">Sincronizar</span>
             </Button>
+            <Button variant="outline" onClick={() => setPresetDialogOpen(true)}>
+              <BookTemplate className="h-4 w-4" />
+              <span className="ml-1 hidden sm:inline">Modelos Prontos</span>
+            </Button>
             <Button variant="gradient" onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4" />
               <span className="ml-1">Novo Template</span>
@@ -384,6 +403,59 @@ const MetaTemplates = () => {
                 Enviar para Aprovação
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Preset Templates Dialog */}
+        <Dialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen}>
+          <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <BookTemplate className="h-5 w-5 text-primary" />
+                Modelos Prontos por Segmento
+              </DialogTitle>
+              <DialogDescription>
+                Selecione um modelo, edite conforme sua necessidade e envie para aprovação da Meta.
+              </DialogDescription>
+            </DialogHeader>
+            <Accordion type="single" collapsible defaultValue="imobiliaria" className="w-full">
+              {META_TEMPLATE_SEGMENTS.map((segment) => (
+                <AccordionItem key={segment.id} value={segment.id}>
+                  <AccordionTrigger className="text-base font-semibold">
+                    {segment.label}
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {segment.presets.map((preset) => (
+                        <Card
+                          key={preset.id}
+                          className="cursor-pointer transition-all hover:shadow-md hover:border-primary/50"
+                          onClick={() => applyPreset(preset)}
+                        >
+                          <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-sm">{preset.displayName}</CardTitle>
+                              <Badge variant="outline" className="text-xs">
+                                {CATEGORIES.find((c) => c.value === preset.category)?.label || preset.category}
+                              </Badge>
+                            </div>
+                            <CardDescription className="text-xs font-mono">{preset.name}</CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-0">
+                            <p className="text-xs text-muted-foreground line-clamp-4 whitespace-pre-line">
+                              {preset.bodyText}
+                            </p>
+                            <div className="flex items-center justify-end mt-2 text-xs text-primary font-medium">
+                              Usar modelo <ChevronRight className="h-3 w-3 ml-1" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </DialogContent>
         </Dialog>
       </div>
