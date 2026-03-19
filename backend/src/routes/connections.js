@@ -314,7 +314,16 @@ router.post('/', async (req, res) => {
     res.status(201).json(connection);
   } catch (error) {
     console.error('Create connection error:', error);
-    res.status(500).json({ error: 'Erro ao criar conexão' });
+    const detail = error.detail || error.message || 'Erro desconhecido';
+    const constraint = error.constraint || null;
+    const hint = error.hint || null;
+    console.error('Create connection DB detail:', { detail, constraint, hint, code: error.code, table: error.table, column: error.column });
+    res.status(500).json({ 
+      error: `Erro ao criar conexão: ${detail}`,
+      constraint,
+      hint,
+      code: error.code,
+    });
   }
 });
 
