@@ -819,6 +819,231 @@ const Campanhas = () => {
             )}
           </TabsContent>
 
+          {/* Reports Tab */}
+          <TabsContent value="reports" className="space-y-6 mt-6">
+            {/* Report Filters */}
+            <div className="flex flex-wrap items-center gap-3 p-4 rounded-lg bg-card border">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("gap-2", reportStartDate && "text-primary border-primary")}>
+                    <CalendarIcon className="h-4 w-4" />
+                    {reportStartDate ? format(reportStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={reportStartDate} onSelect={setReportStartDate} locale={ptBR} className="pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("gap-2", reportEndDate && "text-primary border-primary")}>
+                    <CalendarIcon className="h-4 w-4" />
+                    {reportEndDate ? format(reportEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={reportEndDate} onSelect={setReportEndDate} locale={ptBR} className="pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+              <Button variant="outline" onClick={loadReports} disabled={loadingReport}>
+                {loadingReport ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Atualizar
+              </Button>
+              {(reportStartDate || reportEndDate) && (
+                <Button variant="ghost" size="sm" onClick={() => { setReportStartDate(undefined); setReportEndDate(undefined); }}>
+                  <X className="h-4 w-4" /> Limpar
+                </Button>
+              )}
+            </div>
+
+            {loadingReport && !reportData ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : reportData ? (
+              <>
+                {/* General Stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Send className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{Number(reportData.general.total_campaigns)}</p>
+                          <p className="text-xs text-muted-foreground">Total Campanhas</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-success/10">
+                          <CheckCircle2 className="h-5 w-5 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{Number(reportData.general.total_sent).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Total Enviadas</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-destructive/10">
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{Number(reportData.general.total_failed).toLocaleString()}</p>
+                          <p className="text-xs text-muted-foreground">Total Falhadas</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-warning/10">
+                          <TrendingUp className="h-5 w-5 text-warning" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{reportData.general.success_rate}%</p>
+                          <p className="text-xs text-muted-foreground">Taxa de Sucesso</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Connections Stats */}
+                {reportData.connections.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Wifi className="h-5 w-5 text-primary" />
+                        Envios por Conexão
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Conexão</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Campanhas</TableHead>
+                            <TableHead className="text-right">Enviadas</TableHead>
+                            <TableHead className="text-right">Falhadas</TableHead>
+                            <TableHead className="text-right">Sucesso</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {reportData.connections.map((conn) => (
+                            <TableRow key={conn.connection_id}>
+                              <TableCell className="font-medium">{conn.connection_name}</TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className={cn(
+                                  conn.connection_status === 'connected' ? 'text-success border-success' : 'text-destructive border-destructive'
+                                )}>
+                                  {conn.connection_status === 'connected' ? (
+                                    <><Wifi className="h-3 w-3 mr-1" /> Online</>
+                                  ) : (
+                                    <><WifiOff className="h-3 w-3 mr-1" /> Offline</>
+                                  )}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">{conn.campaign_count}</TableCell>
+                              <TableCell className="text-right font-medium text-success">{Number(conn.total_sent).toLocaleString()}</TableCell>
+                              <TableCell className="text-right text-destructive">{Number(conn.total_failed).toLocaleString()}</TableCell>
+                              <TableCell className="text-right">
+                                <Badge className={cn(
+                                  Number(conn.success_rate) >= 90 ? 'bg-success/10 text-success' :
+                                  Number(conn.success_rate) >= 70 ? 'bg-warning/10 text-warning' :
+                                  'bg-destructive/10 text-destructive',
+                                  'border-0'
+                                )}>
+                                  {conn.success_rate}%
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Campaigns Table */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <BarChart3 className="h-5 w-5 text-primary" />
+                      Detalhes por Campanha
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ScrollArea className="max-h-[400px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Campanha</TableHead>
+                            <TableHead>Conexão</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Contatos</TableHead>
+                            <TableHead className="text-right">Enviadas</TableHead>
+                            <TableHead className="text-right">Falhadas</TableHead>
+                            <TableHead className="text-right">Sucesso</TableHead>
+                            <TableHead>Data</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {reportData.campaigns.map((c) => {
+                            const config = statusConfig[c.status as keyof typeof statusConfig] || statusConfig.pending;
+                            return (
+                              <TableRow key={c.id} className="cursor-pointer" onClick={() => { setSelectedCampaignId(c.id); setShowDetailModal(true); }}>
+                                <TableCell className="font-medium">{c.name}</TableCell>
+                                <TableCell className="text-muted-foreground">{c.connection_name}</TableCell>
+                                <TableCell>
+                                  <Badge className={cn(config.bgColor, config.color, "border-0 text-xs")}>
+                                    {config.label}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">{c.total_contacts}</TableCell>
+                                <TableCell className="text-right font-medium text-success">{c.sent_count}</TableCell>
+                                <TableCell className="text-right text-destructive">{c.failed_count}</TableCell>
+                                <TableCell className="text-right">
+                                  <Badge className={cn(
+                                    Number(c.success_rate) >= 90 ? 'bg-success/10 text-success' :
+                                    Number(c.success_rate) >= 70 ? 'bg-warning/10 text-warning' :
+                                    'bg-destructive/10 text-destructive',
+                                    'border-0'
+                                  )}>
+                                    {c.success_rate}%
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-muted-foreground text-sm">
+                                  {c.created_at ? format(new Date(c.created_at), "dd/MM/yy", { locale: ptBR }) : '-'}
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum dado disponível</p>
+              </div>
+            )}
+          </TabsContent>
+
           <TabsContent value="create" className="mt-6">
             <div className="grid gap-6 lg:grid-cols-2">
               {/* Campaign Details */}
