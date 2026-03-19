@@ -768,13 +768,33 @@ const Campanhas = () => {
                               </Button>
                             )}
                             {campaign.status === "paused" && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleUpdateStatus(campaign.id, "running")}
+                                >
+                                  <Play className="h-4 w-4" />
+                                  Retomar
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenEdit(campaign)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                  Editar
+                                </Button>
+                              </>
+                            )}
+                            {campaign.status === "pending" && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleUpdateStatus(campaign.id, "running")}
+                                onClick={() => handleOpenEdit(campaign)}
                               >
-                                <Play className="h-4 w-4" />
-                                Retomar
+                                <Edit className="h-4 w-4" />
+                                Editar
                               </Button>
                             )}
                             <Button
