@@ -1492,6 +1492,94 @@ const Campanhas = () => {
             setSelectedCampaignId(null);
           }}
         />
+
+        {/* Edit Campaign Dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Edit className="h-5 w-5 text-primary" />
+                Editar Campanha
+              </DialogTitle>
+              <DialogDescription>
+                {editingCampaign?.name} — altere a conexão ou reagende
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Conexão WhatsApp</Label>
+                <Select value={editConnection} onValueChange={setEditConnection}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma conexão" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {connections.map((conn) => (
+                      <SelectItem key={conn.id} value={conn.id}>
+                        <div className="flex items-center gap-2">
+                          {conn.status === 'connected' ? (
+                            <Wifi className="h-3 w-3 text-success" />
+                          ) : (
+                            <WifiOff className="h-3 w-3 text-destructive" />
+                          )}
+                          {conn.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data de Início</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editStartDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editStartDate ? format(editStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={editStartDate} onSelect={setEditStartDate} locale={ptBR} className="pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de Término</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editEndDate && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {editEndDate ? format(editEndDate, "dd/MM/yyyy", { locale: ptBR }) : "Sem limite"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar mode="single" selected={editEndDate} onSelect={setEditEndDate} locale={ptBR} className="pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Horário Início</Label>
+                  <Input type="time" value={editStartTime} onChange={(e) => setEditStartTime(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Horário Término</Label>
+                  <Input type="time" value={editEndTime} onChange={(e) => setEditEndTime(e.target.value)} />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+              <Button onClick={handleSaveEdit} disabled={loadingCampaigns}>
+                {loadingCampaigns ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Salvar
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </MainLayout>
   );
