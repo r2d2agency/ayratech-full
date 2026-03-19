@@ -293,7 +293,7 @@ export function CampaignDetailModal({ campaignId, open, onClose }: CampaignDetai
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : details ? (
-          <div className="flex flex-col gap-4 overflow-hidden">
+          <div className="flex flex-col gap-4 flex-1 min-h-0 overflow-auto">
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-accent/50 rounded-lg p-3 text-center">
