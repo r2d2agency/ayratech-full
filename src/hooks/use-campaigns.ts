@@ -38,6 +38,46 @@ export interface CampaignStats {
   pending: number;
 }
 
+export interface CampaignReport {
+  general: {
+    total_campaigns: string;
+    completed_campaigns: string;
+    running_campaigns: string;
+    paused_campaigns: string;
+    total_sent: string;
+    total_failed: string;
+    success_rate: string;
+  };
+  connections: {
+    connection_id: string;
+    connection_name: string;
+    connection_status: string;
+    campaign_count: string;
+    total_sent: string;
+    total_failed: string;
+    success_rate: string;
+  }[];
+  daily: {
+    date: string;
+    campaigns: string;
+    sent: string;
+    failed: string;
+  }[];
+  campaigns: {
+    id: string;
+    name: string;
+    status: string;
+    sent_count: number;
+    failed_count: number;
+    created_at: string;
+    start_date: string;
+    connection_name: string;
+    list_name: string;
+    total_contacts: string;
+    success_rate: string;
+  }[];
+}
+
 export interface CreateCampaignData {
   name: string;
   connection_id: string;
