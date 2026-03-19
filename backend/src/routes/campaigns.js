@@ -487,6 +487,16 @@ router.patch('/:id/status', async (req, res) => {
           const pauseAfter = campaign.pause_after_messages || 20;
           const pauseDuration = (campaign.pause_duration || 10) * 60; // seconds
           
+          const SP_OFFSET_MS = -3 * 60 * 60 * 1000;
+          const toSaoPauloDate = (utcDate) => new Date(utcDate.getTime() + SP_OFFSET_MS);
+          const fromSaoPauloDate = (spDate) => new Date(spDate.getTime() - SP_OFFSET_MS);
+          
+          // Parse time bounds
+          const startTimeHours = campaign.start_time ? parseInt(campaign.start_time.split(':')[0]) : 0;
+          const startTimeMinutes = campaign.start_time ? parseInt(campaign.start_time.split(':')[1]) : 0;
+          const endTimeHours = campaign.end_time ? parseInt(campaign.end_time.split(':')[0]) : 23;
+          const endTimeMinutes = campaign.end_time ? parseInt(campaign.end_time.split(':')[1]) : 59;
+          
           // Start from now
           let currentTime = new Date();
           let messagesSincePause = 0;
@@ -494,6 +504,27 @@ router.patch('/:id/status', async (req, res) => {
           // Update each pending message with new scheduled time
           for (let i = 0; i < pendingMessages.rows.length; i++) {
             const msgId = pendingMessages.rows[i].id;
+            
+            // Enforce time window
+            let spTime = toSaoPauloDate(currentTime);
+            let scheduleHour = spTime.getUTCHours();
+            let scheduleMinute = spTime.getUTCMinutes();
+            
+            // Past end time → next day start
+            if (scheduleHour > endTimeHours || (scheduleHour === endTimeHours && scheduleMinute > endTimeMinutes)) {
+              spTime.setUTCDate(spTime.getUTCDate() + 1);
+              spTime.setUTCHours(startTimeHours, startTimeMinutes, 0, 0);
+              currentTime = fromSaoPauloDate(spTime);
+            }
+            
+            // Before start time → move to start
+            spTime = toSaoPauloDate(currentTime);
+            scheduleHour = spTime.getUTCHours();
+            scheduleMinute = spTime.getUTCMinutes();
+            if (scheduleHour < startTimeHours || (scheduleHour === startTimeHours && scheduleMinute < startTimeMinutes)) {
+              spTime.setUTCHours(startTimeHours, startTimeMinutes, 0, 0);
+              currentTime = fromSaoPauloDate(spTime);
+            }
             
             await query(
               `UPDATE campaign_messages SET scheduled_at = $1 WHERE id = $2`,
@@ -512,7 +543,7 @@ router.patch('/:id/status', async (req, res) => {
             }
           }
           
-          console.log(`Recalculated ${pendingMessages.rows.length} message times for campaign ${id}`);
+          console.log(`Recalculated ${pendingMessages.rows.length} message times for campaign ${id} (respecting ${campaign.start_time}-${campaign.end_time} window)`);
         }
       }
     }
