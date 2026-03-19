@@ -373,7 +373,7 @@ export function CampaignDetailModal({ campaignId, open, onClose }: CampaignDetai
                 <Users className="h-4 w-4" />
                 Contatos ({details.messages.length})
               </h3>
-              <ScrollArea className="h-[300px] rounded-lg border">
+              <ScrollArea className="h-[40vh] rounded-lg border">
                 <div className="divide-y divide-border">
                   {details.messages.map((msg) => {
                     const config = statusConfig[msg.status];
