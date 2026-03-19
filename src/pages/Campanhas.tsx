@@ -17,6 +17,8 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -43,15 +45,22 @@ import {
   X,
   Tag,
   GitBranch,
+  BarChart3,
+  TrendingUp,
+  Wifi,
+  WifiOff,
+  Edit,
+  ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useCampaigns, Campaign } from "@/hooks/use-campaigns";
+import { useCampaigns, Campaign, CampaignReport } from "@/hooks/use-campaigns";
 import { useContacts, ContactList } from "@/hooks/use-contacts";
 import { useMessages, MessageTemplate } from "@/hooks/use-messages";
 import { useFlows, Flow } from "@/hooks/use-flows";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { CampaignDetailModal } from "@/components/campanhas/CampaignDetailModal";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Connection {
   id: string;
