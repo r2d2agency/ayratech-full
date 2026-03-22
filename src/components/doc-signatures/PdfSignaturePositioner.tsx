@@ -48,6 +48,7 @@ export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, on
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [saving, setSaving] = useState(false);
   const [selectedSigner, setSelectedSigner] = useState<string>('');
+  const justDragged = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -85,6 +86,7 @@ export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, on
 
   const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly || !selectedSigner || dragging || resizing) return;
+    if (justDragged.current) { justDragged.current = false; return; }
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
@@ -152,6 +154,9 @@ export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, on
   }, [dragging, resizing, dragOffset, scale]);
 
   const handleMouseUp = () => {
+    if (dragging || resizing) {
+      justDragged.current = true;
+    }
     setDragging(null);
     setResizing(null);
   };
