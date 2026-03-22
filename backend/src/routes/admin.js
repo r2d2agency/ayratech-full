@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { query } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import nodemailer from 'nodemailer';
 import * as wapiProvider from '../lib/wapi-provider.js';
 
 const router = Router();
