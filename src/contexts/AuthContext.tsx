@@ -15,6 +15,7 @@ interface ModulesEnabled {
   ghost: boolean;
   projects: boolean;
   lead_gleego: boolean;
+  doc_signatures: boolean;
 }
 
 // Page-level permissions from permission templates
