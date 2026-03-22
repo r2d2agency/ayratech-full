@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useDocSignatures } from '@/hooks/use-doc-signatures';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { FileSignature, Loader2, CheckCircle2, RefreshCw, MapPin } from 'lucide-react';
+import { FileSignature, Loader2, CheckCircle2, RefreshCw, MapPin, Download } from 'lucide-react';
 
 export default function AssinarDocumento() {
   const { token } = useParams<{ token: string }>();
@@ -16,6 +16,7 @@ export default function AssinarDocumento() {
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [signed, setSigned] = useState(false);
+  const [signedResult, setSignedResult] = useState<any>(null);
   const [cpfInput, setCpfInput] = useState('');
   const [fullName, setFullName] = useState('');
   const [geolocation, setGeolocation] = useState<string | null>(null);
@@ -24,19 +25,13 @@ export default function AssinarDocumento() {
   const sigPadRef = useRef<SignatureCanvas>(null);
   const { getPublicSigningData, submitSignature, loading: submitting } = useDocSignatures();
 
-  useEffect(() => {
-    if (token) loadData();
-  }, [token]);
+  useEffect(() => { if (token) loadData(); }, [token]);
 
   useEffect(() => {
-    // Try to get geolocation
     if (navigator.geolocation) {
       setLoadingGeo(true);
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setGeolocation(`${pos.coords.latitude},${pos.coords.longitude}`);
-          setLoadingGeo(false);
-        },
+        (pos) => { setGeolocation(`${pos.coords.latitude},${pos.coords.longitude}`); setLoadingGeo(false); },
         () => setLoadingGeo(false),
         { timeout: 10000 }
       );
@@ -49,11 +44,8 @@ export default function AssinarDocumento() {
       setSigningData(data);
       setFullName(data.signer.name);
       setCpfInput(data.signer.cpf);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoadingData(false);
-    }
+    } catch (err: any) { setError(err.message); }
+    finally { setLoadingData(false); }
   };
 
   const formatCpf = (value: string) => {
@@ -64,37 +56,25 @@ export default function AssinarDocumento() {
     return `${nums.slice(0, 3)}.${nums.slice(3, 6)}.${nums.slice(6, 9)}-${nums.slice(9)}`;
   };
 
-  const clearSignature = () => {
-    sigPadRef.current?.clear();
-  };
+  const clearSignature = () => { sigPadRef.current?.clear(); };
 
   const handleSubmit = async () => {
-    if (!sigPadRef.current || sigPadRef.current.isEmpty()) {
-      toast.error('Desenhe sua assinatura');
-      return;
-    }
-    if (!cpfInput || cpfInput.replace(/\D/g, '').length !== 11) {
-      toast.error('CPF inválido');
-      return;
-    }
-    if (!fullName) {
-      toast.error('Nome completo é obrigatório');
-      return;
-    }
+    if (!sigPadRef.current || sigPadRef.current.isEmpty()) { toast.error('Desenhe sua assinatura'); return; }
+    if (!cpfInput || cpfInput.replace(/\D/g, '').length !== 11) { toast.error('CPF inválido'); return; }
+    if (!fullName) { toast.error('Nome completo é obrigatório'); return; }
 
     try {
       const signatureImage = sigPadRef.current.toDataURL('image/png');
-      await submitSignature(token!, {
+      const result = await submitSignature(token!, {
         signature_image: signatureImage,
         cpf: cpfInput,
         full_name: fullName,
         geolocation: geolocation || undefined,
       });
+      setSignedResult(result);
       setSigned(true);
       toast.success('Documento assinado com sucesso!');
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   if (loadingData) {
@@ -123,17 +103,31 @@ export default function AssinarDocumento() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
+          <CardContent className="pt-6 text-center space-y-4">
             <CheckCircle2 className="h-16 w-16 mx-auto mb-4 text-green-500" />
             <h2 className="text-2xl font-bold mb-2">Documento Assinado!</h2>
-            <p className="text-muted-foreground mb-4">
+            <p className="text-muted-foreground">
               Sua assinatura foi registrada com sucesso. Todos os dados foram capturados para validade jurídica.
             </p>
-            <div className="text-xs text-muted-foreground space-y-1 bg-muted p-3 rounded-lg">
+            <div className="text-xs text-muted-foreground space-y-1 bg-muted p-3 rounded-lg text-left">
               <p>📅 Data/Hora: {new Date().toLocaleString('pt-BR')}</p>
               {geolocation && <p>📍 Geolocalização: {geolocation}</p>}
               <p>🖥️ Navegador: {navigator.userAgent.slice(0, 60)}...</p>
             </div>
+
+            {/* Download signed copy */}
+            {signedResult?.download_url && (
+              <Button onClick={() => window.open(signedResult.download_url, '_blank')} className="w-full gap-2" variant="outline">
+                <Download className="h-4 w-4" />
+                Baixar Cópia do Documento Assinado
+              </Button>
+            )}
+            {signingData?.file_url && (
+              <Button onClick={() => window.open(signingData.file_url, '_blank')} className="w-full gap-2" variant="outline">
+                <Download className="h-4 w-4" />
+                Baixar Documento Original
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -143,7 +137,6 @@ export default function AssinarDocumento() {
   return (
     <div className="min-h-screen bg-background p-4 md:p-8">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -162,23 +155,17 @@ export default function AssinarDocumento() {
           </CardContent>
         </Card>
 
-        {/* Document Preview */}
         {signingData?.file_url && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Visualizar Documento</CardTitle>
             </CardHeader>
             <CardContent>
-              <iframe
-                src={signingData.file_url}
-                className="w-full h-[500px] border rounded-lg"
-                title="Documento PDF"
-              />
+              <iframe src={signingData.file_url} className="w-full h-[500px] border rounded-lg" title="Documento PDF" />
             </CardContent>
           </Card>
         )}
 
-        {/* Signer Information */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Dados do Signatário</CardTitle>
@@ -199,14 +186,12 @@ export default function AssinarDocumento() {
           </CardContent>
         </Card>
 
-        {/* Signature Pad */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">Sua Assinatura</CardTitle>
               <Button variant="outline" size="sm" onClick={clearSignature} className="gap-1">
-                <RefreshCw className="h-3 w-3" />
-                Limpar
+                <RefreshCw className="h-3 w-3" /> Limpar
               </Button>
             </div>
           </CardHeader>
@@ -215,10 +200,7 @@ export default function AssinarDocumento() {
               <SignatureCanvas
                 ref={sigPadRef}
                 penColor="black"
-                canvasProps={{
-                  className: 'w-full h-[200px]',
-                  style: { width: '100%', height: '200px' }
-                }}
+                canvasProps={{ className: 'w-full h-[200px]', style: { width: '100%', height: '200px' } }}
               />
             </div>
             <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -227,7 +209,6 @@ export default function AssinarDocumento() {
           </CardContent>
         </Card>
 
-        {/* Legal Notice */}
         <Card className="border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
           <CardContent className="pt-4">
             <p className="text-xs text-amber-800 dark:text-amber-200">
@@ -239,7 +220,6 @@ export default function AssinarDocumento() {
           </CardContent>
         </Card>
 
-        {/* Submit */}
         <Button onClick={handleSubmit} disabled={submitting} className="w-full gap-2" size="lg">
           {submitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <FileSignature className="h-5 w-5" />}
           Assinar Documento

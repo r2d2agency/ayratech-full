@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,13 +12,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { FileUploadInput } from '@/components/ui/file-upload-input';
+import { PdfSignaturePositioner } from '@/components/doc-signatures/PdfSignaturePositioner';
 import { useDocSignatures, DocSignatureDocument, DocSigner, AuditLog, SignaturePosition } from '@/hooks/use-doc-signatures';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   FileSignature, Plus, Loader2, Eye, Send, Copy, Trash2,
-  UserPlus, FileText, Clock, CheckCircle2, XCircle, Shield, Download, Link2, Users
+  UserPlus, FileText, Clock, CheckCircle2, XCircle, Shield, Download, Link2, Users, MapPin
 } from 'lucide-react';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }> = {
@@ -38,6 +39,7 @@ export default function Assinaturas() {
   const [signers, setSigners] = useState<DocSigner[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [positions, setPositions] = useState<SignaturePosition[]>([]);
+  const [activeTab, setActiveTab] = useState('signers');
 
   // Create form
   const [newTitle, setNewTitle] = useState('');
@@ -50,11 +52,9 @@ export default function Assinaturas() {
   const [signerCpf, setSignerCpf] = useState('');
   const [signerRole, setSignerRole] = useState('signer');
 
-  const { listDocuments, getDocument, createDocument, addSigner, removeSigner, sendForSignature, cancelDocument, loading: actionLoading } = useDocSignatures();
+  const { listDocuments, getDocument, createDocument, addSigner, removeSigner, sendForSignature, cancelDocument, savePositions, downloadSignedPdf, loading: actionLoading } = useDocSignatures();
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
+  useEffect(() => { loadDocuments(); }, []);
 
   const loadDocuments = async () => {
     setLoading(true);
@@ -70,55 +70,38 @@ export default function Assinaturas() {
       setSigners(data.signers);
       setAuditLogs(data.audit);
       setPositions(data.positions);
+      setActiveTab('signers');
       setDetailOpen(true);
     }
   };
 
   const handleCreate = async () => {
-    if (!newTitle || !newFileUrl) {
-      toast.error('Título e arquivo são obrigatórios');
-      return;
-    }
+    if (!newTitle || !newFileUrl) { toast.error('Título e arquivo são obrigatórios'); return; }
     try {
       await createDocument({ title: newTitle, description: newDescription, file_url: newFileUrl });
       toast.success('Documento criado com sucesso!');
       setCreateOpen(false);
-      setNewTitle('');
-      setNewDescription('');
-      setNewFileUrl('');
+      setNewTitle(''); setNewDescription(''); setNewFileUrl('');
       loadDocuments();
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleAddSigner = async () => {
     if (!selectedDoc) return;
-    if (!signerName || !signerEmail || !signerCpf) {
-      toast.error('Nome, email e CPF são obrigatórios');
-      return;
-    }
+    if (!signerName || !signerEmail || !signerCpf) { toast.error('Nome, email e CPF são obrigatórios'); return; }
     try {
       await addSigner(selectedDoc.id, { name: signerName, email: signerEmail, cpf: signerCpf, role: signerRole });
       toast.success('Signatário adicionado!');
       setAddSignerOpen(false);
-      setSignerName('');
-      setSignerEmail('');
-      setSignerCpf('');
-      setSignerRole('signer');
+      setSignerName(''); setSignerEmail(''); setSignerCpf(''); setSignerRole('signer');
       loadDocumentDetail(selectedDoc.id);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleRemoveSigner = async (signerId: string) => {
     if (!selectedDoc) return;
     const ok = await removeSigner(selectedDoc.id, signerId);
-    if (ok) {
-      toast.success('Signatário removido');
-      loadDocumentDetail(selectedDoc.id);
-    }
+    if (ok) { toast.success('Signatário removido'); loadDocumentDetail(selectedDoc.id); }
   };
 
   const handleSend = async () => {
@@ -128,25 +111,34 @@ export default function Assinaturas() {
       toast.success('Documento enviado para assinatura!');
       loadDocumentDetail(selectedDoc.id);
       loadDocuments();
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    } catch (err: any) { toast.error(err.message); }
   };
 
   const handleCancel = async () => {
     if (!selectedDoc) return;
     const ok = await cancelDocument(selectedDoc.id);
+    if (ok) { toast.success('Documento cancelado'); setDetailOpen(false); loadDocuments(); }
+  };
+
+  const handleSavePositions = async (newPositions: any[]) => {
+    if (!selectedDoc) return;
+    const ok = await savePositions(selectedDoc.id, newPositions);
     if (ok) {
-      toast.success('Documento cancelado');
-      setDetailOpen(false);
-      loadDocuments();
+      toast.success('Posições de assinatura salvas!');
+      loadDocumentDetail(selectedDoc.id);
+    } else {
+      toast.error('Erro ao salvar posições');
     }
   };
 
-  const getSigningLink = (signer: DocSigner) => {
-    return `${window.location.origin}/assinar/${signer.sign_token}`;
+  const handleDownload = async () => {
+    if (!selectedDoc) return;
+    const url = await downloadSignedPdf(selectedDoc.id);
+    if (url) { window.open(url, '_blank'); }
+    else { toast.error('Erro ao baixar documento'); }
   };
 
+  const getSigningLink = (signer: DocSigner) => `${window.location.origin}/assinar/${signer.sign_token}`;
   const copySigningLink = (signer: DocSigner) => {
     navigator.clipboard.writeText(getSigningLink(signer));
     toast.success('Link copiado!');
@@ -159,6 +151,8 @@ export default function Assinaturas() {
     if (nums.length <= 9) return `${nums.slice(0, 3)}.${nums.slice(3, 6)}.${nums.slice(6)}`;
     return `${nums.slice(0, 3)}.${nums.slice(3, 6)}.${nums.slice(6, 9)}-${nums.slice(9)}`;
   };
+
+  const allSigned = (doc: DocSignatureDocument) => doc.signers_count > 0 && doc.signed_count === doc.signers_count;
 
   return (
     <MainLayout>
@@ -218,15 +212,16 @@ export default function Assinaturas() {
                   <TableRow>
                     <TableHead>Documento</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Signatários</TableHead>
+                    <TableHead>Progresso</TableHead>
                     <TableHead>Criado em</TableHead>
-                    <TableHead className="w-[80px]">Ações</TableHead>
+                    <TableHead className="w-[120px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {documents.map((doc) => {
                     const status = statusConfig[doc.status] || statusConfig.draft;
                     const StatusIcon = status.icon;
+                    const complete = allSigned(doc);
                     return (
                       <TableRow key={doc.id} className="cursor-pointer" onClick={() => loadDocumentDetail(doc.id)}>
                         <TableCell>
@@ -242,15 +237,39 @@ export default function Assinaturas() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <span className="text-sm">{doc.signed_count}/{doc.signers_count}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all"
+                                style={{
+                                  width: doc.signers_count > 0 ? `${(doc.signed_count / doc.signers_count) * 100}%` : '0%',
+                                  backgroundColor: complete ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+                                }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium">
+                              {doc.signed_count}/{doc.signers_count}
+                              {complete && doc.status === 'completed' && <CheckCircle2 className="h-3 w-3 inline ml-1 text-green-500" />}
+                            </span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {format(new Date(doc.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); loadDocumentDetail(doc.id); }}>
-                            <Eye className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" onClick={() => loadDocumentDetail(doc.id)} title="Ver detalhes">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {doc.status === 'completed' && (
+                              <Button variant="ghost" size="icon" onClick={async () => {
+                                const url = await downloadSignedPdf(doc.id);
+                                if (url) window.open(url, '_blank');
+                              }} title="Baixar documento">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -279,12 +298,7 @@ export default function Assinaturas() {
               </div>
               <div className="space-y-2">
                 <Label>Arquivo PDF *</Label>
-                <FileUploadInput
-                  value={newFileUrl}
-                  onChange={setNewFileUrl}
-                  accept=".pdf,application/pdf"
-                  placeholder="Faça upload do PDF"
-                />
+                <FileUploadInput value={newFileUrl} onChange={setNewFileUrl} accept=".pdf,application/pdf" placeholder="Faça upload do PDF" />
               </div>
             </div>
             <DialogFooter>
@@ -299,7 +313,7 @@ export default function Assinaturas() {
 
         {/* Document Detail Dialog */}
         <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-5xl max-h-[95vh] overflow-y-auto">
             {selectedDoc && (
               <>
                 <DialogHeader>
@@ -307,25 +321,33 @@ export default function Assinaturas() {
                     <FileSignature className="h-5 w-5 text-primary" />
                     {selectedDoc.title}
                   </DialogTitle>
-                  <DialogDescription>
-                    {selectedDoc.description || 'Sem descrição'}
+                  <DialogDescription className="flex items-center gap-3 flex-wrap">
+                    <span>{selectedDoc.description || 'Sem descrição'}</span>
+                    <Badge variant={statusConfig[selectedDoc.status]?.variant || 'secondary'}>
+                      {statusConfig[selectedDoc.status]?.label || selectedDoc.status}
+                    </Badge>
+                    <span className="text-xs">
+                      Assinaturas: {selectedDoc.signed_count}/{selectedDoc.signers_count}
+                      {allSigned(selectedDoc) && selectedDoc.status === 'completed' && ' ✅ Completo'}
+                    </span>
                   </DialogDescription>
                 </DialogHeader>
 
-                <Tabs defaultValue="signers" className="mt-4">
-                  <TabsList className="grid w-full grid-cols-3">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+                  <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="signers" className="gap-1"><Users className="h-3 w-3" /> Signatários</TabsTrigger>
+                    <TabsTrigger value="positions" className="gap-1"><MapPin className="h-3 w-3" /> Posições</TabsTrigger>
                     <TabsTrigger value="links" className="gap-1"><Link2 className="h-3 w-3" /> Links</TabsTrigger>
                     <TabsTrigger value="audit" className="gap-1"><Shield className="h-3 w-3" /> Auditoria</TabsTrigger>
                   </TabsList>
 
+                  {/* Signers Tab */}
                   <TabsContent value="signers" className="space-y-4">
                     <div className="flex items-center justify-between">
                       <p className="text-sm text-muted-foreground">{signers.length} signatário(s)</p>
                       {selectedDoc.status === 'draft' && (
                         <Button size="sm" variant="outline" onClick={() => setAddSignerOpen(true)} className="gap-1">
-                          <UserPlus className="h-3 w-3" />
-                          Adicionar
+                          <UserPlus className="h-3 w-3" /> Adicionar
                         </Button>
                       )}
                     </div>
@@ -335,28 +357,33 @@ export default function Assinaturas() {
                       <div className="space-y-2">
                         {signers.map((signer) => (
                           <div key={signer.id} className="flex items-center justify-between p-3 rounded-lg border">
-                            <div>
-                              <p className="font-medium">{signer.name}</p>
-                              <p className="text-xs text-muted-foreground">{signer.email} • CPF: {signer.cpf}</p>
-                              <div className="flex gap-1 mt-1">
-                                <Badge variant="outline" className="text-xs">{signer.role === 'signer' ? 'Signatário' : signer.role === 'witness' ? 'Testemunha' : 'Aprovador'}</Badge>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium">{signer.name}</p>
                                 <Badge variant={signer.status === 'signed' ? 'default' : signer.status === 'declined' ? 'destructive' : 'secondary'} className="text-xs">
-                                  {signer.status === 'signed' ? 'Assinado' : signer.status === 'declined' ? 'Recusado' : 'Pendente'}
+                                  {signer.status === 'signed' ? '✅ Assinado' : signer.status === 'declined' ? '❌ Recusado' : '⏳ Pendente'}
                                 </Badge>
                               </div>
+                              <p className="text-xs text-muted-foreground">{signer.email} • CPF: {signer.cpf}</p>
+                              <Badge variant="outline" className="text-xs mt-1">
+                                {signer.role === 'signer' ? 'Signatário' : signer.role === 'witness' ? 'Testemunha' : 'Aprovador'}
+                              </Badge>
+                              {signer.signed_at && (
+                                <p className="text-xs text-green-600 mt-1">
+                                  Assinado em: {format(new Date(signer.signed_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                </p>
+                              )}
                             </div>
                             <div className="flex gap-1">
-                              {selectedDoc.status === 'pending' && signer.status === 'pending' && (
-                                <Button variant="ghost" size="icon" onClick={() => copySigningLink(signer)} title="Copiar link">
-                                  <Copy className="h-4 w-4" />
+                              {(selectedDoc.status === 'pending') && signer.status === 'pending' && (
+                                <Button variant="outline" size="sm" onClick={() => copySigningLink(signer)} className="gap-1 text-xs">
+                                  <Copy className="h-3 w-3" /> Copiar Link
                                 </Button>
                               )}
                               {selectedDoc.status === 'draft' && (
                                 <AlertDialog>
                                   <AlertDialogTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="text-destructive">
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
+                                    <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                                   </AlertDialogTrigger>
                                   <AlertDialogContent>
                                     <AlertDialogHeader>
@@ -377,34 +404,83 @@ export default function Assinaturas() {
                     )}
                   </TabsContent>
 
+                  {/* Positions Tab - PDF Viewer with drag & drop */}
+                  <TabsContent value="positions" className="space-y-4">
+                    {signers.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <MapPin className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        <p>Adicione signatários antes de posicionar assinaturas</p>
+                      </div>
+                    ) : selectedDoc.file_url ? (
+                      <PdfSignaturePositioner
+                        fileUrl={selectedDoc.file_url}
+                        signers={signers}
+                        existingPositions={positions}
+                        onSave={handleSavePositions}
+                        readOnly={selectedDoc.status !== 'draft'}
+                      />
+                    ) : (
+                      <p className="text-center text-muted-foreground py-8">Nenhum arquivo PDF encontrado</p>
+                    )}
+                  </TabsContent>
+
+                  {/* Links Tab */}
                   <TabsContent value="links" className="space-y-4">
-                    {selectedDoc.status !== 'pending' ? (
+                    {selectedDoc.status === 'draft' ? (
                       <p className="text-center text-muted-foreground py-6">
-                        Links de assinatura ficam disponíveis após enviar o documento
+                        Links ficam disponíveis após enviar o documento para assinatura
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {signers.filter(s => s.status === 'pending').map((signer) => (
+                        {/* Per-signer links */}
+                        {signers.map((signer) => (
                           <div key={signer.id} className="p-3 rounded-lg border space-y-2">
                             <div className="flex items-center justify-between">
-                              <p className="font-medium text-sm">{signer.name}</p>
-                              <Button size="sm" variant="outline" onClick={() => copySigningLink(signer)} className="gap-1">
-                                <Copy className="h-3 w-3" />
-                                Copiar Link
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm">{signer.name}</p>
+                                <Badge variant={signer.status === 'signed' ? 'default' : 'secondary'} className="text-xs">
+                                  {signer.status === 'signed' ? '✅ Assinado' : '⏳ Pendente'}
+                                </Badge>
+                              </div>
+                              {signer.status === 'pending' && (
+                                <Button size="sm" variant="outline" onClick={() => copySigningLink(signer)} className="gap-1">
+                                  <Copy className="h-3 w-3" /> Copiar
+                                </Button>
+                              )}
                             </div>
-                            <p className="text-xs text-muted-foreground break-all font-mono bg-muted p-2 rounded">
-                              {getSigningLink(signer)}
-                            </p>
+                            {signer.status === 'pending' && (
+                              <p className="text-xs text-muted-foreground break-all font-mono bg-muted p-2 rounded select-all">
+                                {getSigningLink(signer)}
+                              </p>
+                            )}
+                            {signer.status === 'signed' && signer.signed_at && (
+                              <p className="text-xs text-green-600">
+                                Assinado em {format(new Date(signer.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                {signer.ip_address && ` • IP: ${signer.ip_address}`}
+                              </p>
+                            )}
                           </div>
                         ))}
-                        {signers.filter(s => s.status === 'pending').length === 0 && (
-                          <p className="text-center text-muted-foreground py-4">Todos os signatários já assinaram</p>
+
+                        {/* General download */}
+                        {selectedDoc.status === 'completed' && (
+                          <Card className="border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-800">
+                            <CardContent className="p-4 flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-green-800 dark:text-green-200">✅ Todas as assinaturas concluídas!</p>
+                                <p className="text-xs text-green-600 dark:text-green-400">Documento pronto para download</p>
+                              </div>
+                              <Button onClick={handleDownload} className="gap-1">
+                                <Download className="h-4 w-4" /> Baixar PDF
+                              </Button>
+                            </CardContent>
+                          </Card>
                         )}
                       </div>
                     )}
                   </TabsContent>
 
+                  {/* Audit Tab */}
                   <TabsContent value="audit" className="space-y-2">
                     {auditLogs.length === 0 ? (
                       <p className="text-center text-muted-foreground py-6">Sem registros de auditoria</p>
@@ -418,9 +494,7 @@ export default function Assinaturas() {
                                 {format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
                               </span>
                             </div>
-                            <p className="text-muted-foreground text-xs mt-1">
-                              {log.actor_name} ({log.actor_email})
-                            </p>
+                            <p className="text-muted-foreground text-xs mt-1">{log.actor_name} ({log.actor_email})</p>
                             {log.ip_address && <p className="text-xs text-muted-foreground">IP: {log.ip_address}</p>}
                           </div>
                         ))}
@@ -429,6 +503,7 @@ export default function Assinaturas() {
                   </TabsContent>
                 </Tabs>
 
+                {/* Footer actions */}
                 <div className="flex justify-between pt-4 border-t mt-4">
                   <div>
                     {selectedDoc.status === 'pending' && (
@@ -447,6 +522,11 @@ export default function Assinaturas() {
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
+                    )}
+                    {selectedDoc.status === 'completed' && (
+                      <Button variant="outline" onClick={handleDownload} className="gap-1">
+                        <Download className="h-4 w-4" /> Baixar Documento Final
+                      </Button>
                     )}
                   </div>
                   <div className="flex gap-2">
