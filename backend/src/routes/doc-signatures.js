@@ -210,6 +210,29 @@ async function readRemoteBinary(url) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
+function toAbsoluteFileUrl(req, fileUrl) {
+  if (!fileUrl || typeof fileUrl !== 'string') return null;
+  if (HTTP_URL_REGEX.test(fileUrl) || /^data:/i.test(fileUrl) || /^blob:/i.test(fileUrl)) {
+    return fileUrl;
+  }
+
+  const normalizedPath = fileUrl.startsWith('/') ? fileUrl : `/${fileUrl}`;
+  const envBase = String(process.env.API_BASE_URL || '').trim().replace(/\/+$/, '');
+  if (envBase && HTTP_URL_REGEX.test(envBase)) {
+    return `${envBase}${normalizedPath}`;
+  }
+
+  const forwardedProto = req.headers['x-forwarded-proto'];
+  const protocolRaw = Array.isArray(forwardedProto)
+    ? forwardedProto[0]
+    : (typeof forwardedProto === 'string' ? forwardedProto.split(',')[0].trim() : req.protocol);
+  const protocol = protocolRaw || 'http';
+  const host = req.get?.('host') || req.headers.host;
+
+  if (!host) return normalizedPath;
+  return `${protocol}://${host}${normalizedPath}`;
+}
+
 // Helper: send OTP email
 async function sendOtpEmail(signerEmail, signerName, code, docTitle, orgId) {
   const smtpConfig = await getSmtpConfig(orgId);
@@ -746,10 +769,56 @@ router.post('/sign/:token', async (req, res) => {
       console.error('[doc-signatures] PDF generation error:', pdfErr.message);
     }
 
-    res.json({ success: true, signed_pdf_url: signedPdfUrl, download_url: signedPdfUrl });
+    const signedPdfAbsoluteUrl = toAbsoluteFileUrl(req, signedPdfUrl);
+
+    res.json({
+      success: true,
+      signed_pdf_url: signedPdfAbsoluteUrl,
+      download_url: signedPdfAbsoluteUrl,
+    });
   } catch (error) {
     console.error('[doc-signatures] Submit signature error:', error);
     res.status(500).json({ error: 'Erro ao processar assinatura' });
+  }
+});
+
+router.get('/sign/:token/download', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const result = await query(
+      `SELECT s.id as signer_id, s.status as signer_status,
+              d.id as doc_id, d.signed_file_url
+       FROM doc_signature_signers s
+       JOIN doc_signature_documents d ON d.id = s.document_id
+       WHERE s.sign_token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Link inválido' });
+
+    const signer = result.rows[0];
+    if (signer.signer_status !== 'signed') {
+      return res.status(403).json({ error: 'Documento ainda não foi assinado por este signatário' });
+    }
+
+    let downloadUrl = signer.signed_file_url;
+    if (!downloadUrl) {
+      try {
+        downloadUrl = await generateSignedPdf(signer.doc_id);
+      } catch (generationError) {
+        console.error('[doc-signatures] Public download generation error:', generationError.message);
+      }
+    }
+
+    const absoluteDownloadUrl = toAbsoluteFileUrl(req, downloadUrl);
+    if (!absoluteDownloadUrl) {
+      return res.status(404).json({ error: 'PDF assinado ainda não está disponível' });
+    }
+
+    res.json({ url: absoluteDownloadUrl });
+  } catch (error) {
+    console.error('[doc-signatures] Public download error:', error);
+    res.status(500).json({ error: 'Erro ao obter documento assinado' });
   }
 });
 
@@ -992,7 +1061,12 @@ router.get('/:id/download', async (req, res) => {
       }
     }
 
-    res.json({ url: downloadUrl || doc.file_url });
+    const absoluteDownloadUrl = toAbsoluteFileUrl(req, downloadUrl);
+    if (!absoluteDownloadUrl) {
+      return res.status(404).json({ error: 'PDF assinado ainda não está disponível' });
+    }
+
+    res.json({ url: absoluteDownloadUrl });
   } catch (error) {
     console.error('[doc-signatures] Download error:', error);
     res.status(500).json({ error: 'Erro ao baixar documento' });
