@@ -1,0 +1,306 @@
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Move, Save, Loader2 } from 'lucide-react';
+import { DocSigner, SignaturePosition } from '@/hooks/use-doc-signatures';
+import { resolveMediaUrl } from '@/lib/media';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+
+interface DraggableBox {
+  id: string;
+  signer_id: string;
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+interface Props {
+  fileUrl: string;
+  signers: DocSigner[];
+  existingPositions: SignaturePosition[];
+  onSave: (positions: DraggableBox[]) => Promise<void>;
+  readOnly?: boolean;
+}
+
+const SIGNER_COLORS = [
+  'hsl(var(--primary))',
+  'hsl(210, 80%, 55%)',
+  'hsl(150, 60%, 45%)',
+  'hsl(30, 90%, 55%)',
+  'hsl(280, 60%, 55%)',
+  'hsl(0, 70%, 55%)',
+];
+
+export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, onSave, readOnly = false }: Props) {
+  const [numPages, setNumPages] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [scale, setScale] = useState(1);
+  const [boxes, setBoxes] = useState<DraggableBox[]>([]);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const [resizing, setResizing] = useState<string | null>(null);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [saving, setSaving] = useState(false);
+  const [selectedSigner, setSelectedSigner] = useState<string>('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (existingPositions.length > 0) {
+      setBoxes(existingPositions.map(p => ({
+        id: p.id,
+        signer_id: p.signer_id,
+        page: p.page,
+        x: p.x,
+        y: p.y,
+        width: p.width,
+        height: p.height,
+      })));
+    }
+  }, [existingPositions]);
+
+  useEffect(() => {
+    if (signers.length > 0 && !selectedSigner) {
+      setSelectedSigner(signers[0].id);
+    }
+  }, [signers]);
+
+  const getSignerColor = (signerId: string) => {
+    const idx = signers.findIndex(s => s.id === signerId);
+    return SIGNER_COLORS[idx % SIGNER_COLORS.length];
+  };
+
+  const getSignerName = (signerId: string) => {
+    return signers.find(s => s.id === signerId)?.name || 'Desconhecido';
+  };
+
+  const handleDocumentLoadSuccess = ({ numPages: n }: { numPages: number }) => {
+    setNumPages(n);
+  };
+
+  const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (readOnly || !selectedSigner || dragging || resizing) return;
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / scale;
+    const y = (e.clientY - rect.top) / scale;
+
+    // Check if click is on existing box
+    const clickedBox = boxes.find(b =>
+      b.page === currentPage &&
+      x >= b.x && x <= b.x + b.width &&
+      y >= b.y && y <= b.y + b.height
+    );
+    if (clickedBox) return;
+
+    const newBox: DraggableBox = {
+      id: crypto.randomUUID(),
+      signer_id: selectedSigner,
+      page: currentPage,
+      x: Math.max(0, x - 100),
+      y: Math.max(0, y - 30),
+      width: 200,
+      height: 60,
+    };
+    setBoxes(prev => [...prev, newBox]);
+  }, [readOnly, selectedSigner, currentPage, scale, dragging, resizing, boxes]);
+
+  const handleMouseDown = (e: React.MouseEvent, boxId: string, isResize = false) => {
+    if (readOnly) return;
+    e.stopPropagation();
+    const box = boxes.find(b => b.id === boxId);
+    if (!box) return;
+
+    const rect = (e.currentTarget.parentElement?.parentElement as HTMLElement)?.getBoundingClientRect();
+    if (!rect) return;
+
+    if (isResize) {
+      setResizing(boxId);
+    } else {
+      setDragging(boxId);
+      setDragOffset({
+        x: (e.clientX - rect.left) / scale - box.x,
+        y: (e.clientY - rect.top) / scale - box.y,
+      });
+    }
+  };
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging && !resizing) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mx = (e.clientX - rect.left) / scale;
+    const my = (e.clientY - rect.top) / scale;
+
+    setBoxes(prev => prev.map(b => {
+      if (dragging && b.id === dragging) {
+        return { ...b, x: Math.max(0, mx - dragOffset.x), y: Math.max(0, my - dragOffset.y) };
+      }
+      if (resizing && b.id === resizing) {
+        return {
+          ...b,
+          width: Math.max(100, mx - b.x),
+          height: Math.max(40, my - b.y),
+        };
+      }
+      return b;
+    }));
+  }, [dragging, resizing, dragOffset, scale]);
+
+  const handleMouseUp = () => {
+    setDragging(null);
+    setResizing(null);
+  };
+
+  const removeBox = (boxId: string) => {
+    setBoxes(prev => prev.filter(b => b.id !== boxId));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await onSave(boxes);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resolvedUrl = resolveMediaUrl(fileUrl);
+  const currentPageBoxes = boxes.filter(b => b.page === currentPage);
+
+  return (
+    <div className="space-y-3">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between flex-wrap gap-2 p-3 bg-muted rounded-lg">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <span className="text-sm font-medium min-w-[80px] text-center">
+            Página {currentPage} / {numPages || '?'}
+          </span>
+          <Button variant="outline" size="icon" disabled={currentPage >= numPages} onClick={() => setCurrentPage(p => p + 1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={() => setScale(s => Math.max(0.5, s - 0.1))}>
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-xs w-12 text-center">{Math.round(scale * 100)}%</span>
+          <Button variant="outline" size="icon" onClick={() => setScale(s => Math.min(2, s + 0.1))}>
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {!readOnly && (
+          <div className="flex items-center gap-2">
+            <Select value={selectedSigner} onValueChange={setSelectedSigner}>
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue placeholder="Selecione signatário" />
+              </SelectTrigger>
+              <SelectContent>
+                {signers.map((s, i) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full" style={{ background: SIGNER_COLORS[i % SIGNER_COLORS.length] }} />
+                      {s.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1">
+              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
+              Salvar Posições
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      {!readOnly && (
+        <div className="flex flex-wrap gap-2">
+          {signers.map((s, i) => (
+            <Badge key={s.id} variant="outline" className="text-xs gap-1" style={{ borderColor: SIGNER_COLORS[i % SIGNER_COLORS.length] }}>
+              <span className="w-2 h-2 rounded-full" style={{ background: SIGNER_COLORS[i % SIGNER_COLORS.length] }} />
+              {s.name} ({boxes.filter(b => b.signer_id === s.id).length} áreas)
+            </Badge>
+          ))}
+          {!readOnly && <p className="text-xs text-muted-foreground ml-2 self-center">Clique no PDF para adicionar área de assinatura</p>}
+        </div>
+      )}
+
+      {/* PDF Viewer with overlay */}
+      <div
+        ref={containerRef}
+        className="border rounded-lg overflow-auto bg-muted/30 max-h-[600px]"
+      >
+        <div className="inline-block relative" style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}>
+          <Document
+            file={resolvedUrl}
+            onLoadSuccess={handleDocumentLoadSuccess}
+            loading={<div className="flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+            error={<div className="p-10 text-center text-destructive">Erro ao carregar PDF. Verifique o arquivo.</div>}
+          >
+            <div
+              className="relative"
+              onClick={handlePageClick}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ cursor: readOnly ? 'default' : 'crosshair' }}
+            >
+              <Page pageNumber={currentPage} renderTextLayer={true} renderAnnotationLayer={true} />
+
+              {/* Signature boxes overlay */}
+              {currentPageBoxes.map((box) => (
+                <div
+                  key={box.id}
+                  className="absolute border-2 rounded flex flex-col items-center justify-center text-xs select-none group"
+                  style={{
+                    left: box.x,
+                    top: box.y,
+                    width: box.width,
+                    height: box.height,
+                    borderColor: getSignerColor(box.signer_id),
+                    backgroundColor: `${getSignerColor(box.signer_id)}15`,
+                    cursor: readOnly ? 'default' : 'move',
+                  }}
+                  onMouseDown={(e) => handleMouseDown(e, box.id)}
+                >
+                  <Move className="h-3 w-3 mb-0.5 opacity-50" />
+                  <span className="font-medium truncate max-w-full px-1" style={{ color: getSignerColor(box.signer_id) }}>
+                    {getSignerName(box.signer_id)}
+                  </span>
+                  <span className="text-[10px] opacity-60">Assinatura</span>
+
+                  {!readOnly && (
+                    <>
+                      <button
+                        className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
+                        onClick={(e) => { e.stopPropagation(); removeBox(box.id); }}
+                      >
+                        ×
+                      </button>
+                      <div
+                        className="absolute bottom-0 right-0 w-3 h-3 cursor-se-resize opacity-0 group-hover:opacity-100"
+                        style={{ borderRight: `2px solid ${getSignerColor(box.signer_id)}`, borderBottom: `2px solid ${getSignerColor(box.signer_id)}` }}
+                        onMouseDown={(e) => handleMouseDown(e, box.id, true)}
+                      />
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Document>
+        </div>
+      </div>
+    </div>
+  );
+}
