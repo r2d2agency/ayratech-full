@@ -105,19 +105,38 @@ async function ensureTables() {
 
 ensureTables();
 
+// Encryption for SMTP passwords (must match email.js)
+const ENCRYPTION_KEY = process.env.EMAIL_ENCRYPTION_KEY || 'whatsale-email-key-32chars!!';
+const ALGORITHM = 'aes-256-cbc';
+
+function decryptPassword(encryptedPassword) {
+  try {
+    const [ivHex, encrypted] = encryptedPassword.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const key = crypto.scryptSync(ENCRYPTION_KEY, 'salt', 32);
+    const decipher = crypto.createDecipheriv(ALGORITHM, key, iv);
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+  } catch {
+    return encryptedPassword; // fallback: assume plain text
+  }
+}
+
 // Helper: get SMTP config for org
 async function getSmtpConfig(orgId) {
-  const r = await query(`SELECT * FROM smtp_configs WHERE organization_id = $1 AND is_active = true LIMIT 1`, [orgId]);
+  const r = await query(`SELECT * FROM email_smtp_configs WHERE organization_id = $1 AND is_active = true LIMIT 1`, [orgId]);
   return r.rows[0] || null;
 }
 
 // Helper: create nodemailer transporter
 function createTransporter(config) {
+  const password = config.password_encrypted ? decryptPassword(config.password_encrypted) : config.password;
   return nodemailer.createTransport({
     host: config.host,
     port: config.port,
     secure: config.secure || config.port === 465,
-    auth: { user: config.username, pass: config.password },
+    auth: { user: config.username, pass: password },
   });
 }
 
@@ -128,7 +147,7 @@ async function sendOtpEmail(signerEmail, signerName, code, docTitle, orgId) {
 
   // Fallback: try any active SMTP config
   if (!smtpConfig) {
-    const r = await query(`SELECT * FROM smtp_configs WHERE is_active = true LIMIT 1`);
+    const r = await query(`SELECT * FROM email_smtp_configs WHERE is_active = true LIMIT 1`);
     smtpConfig = r.rows[0] || null;
   }
 
