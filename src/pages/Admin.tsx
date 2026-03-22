@@ -116,6 +116,18 @@ export default function Admin() {
   // CNPJ API token
   const [cnpjApiToken, setCnpjApiToken] = useState('');
   const [savingCnpjToken, setSavingCnpjToken] = useState(false);
+
+  // Doc Signature SMTP
+  const [docSmtpHost, setDocSmtpHost] = useState('');
+  const [docSmtpPort, setDocSmtpPort] = useState('587');
+  const [docSmtpSecure, setDocSmtpSecure] = useState(true);
+  const [docSmtpUsername, setDocSmtpUsername] = useState('');
+  const [docSmtpPassword, setDocSmtpPassword] = useState('');
+  const [docSmtpFromName, setDocSmtpFromName] = useState('');
+  const [docSmtpFromEmail, setDocSmtpFromEmail] = useState('');
+  const [savingDocSmtp, setSavingDocSmtp] = useState(false);
+  const [testingDocSmtp, setTestingDocSmtp] = useState(false);
+  const [showDocSmtpPassword, setShowDocSmtpPassword] = useState(false);
   
   // User search and filter
   const [userSearch, setUserSearch] = useState('');
