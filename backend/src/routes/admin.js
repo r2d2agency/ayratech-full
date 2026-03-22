@@ -463,6 +463,7 @@ router.post('/plans', requireSuperadmin, async (req, res) => {
         has_ghost || false,
         has_projects || false,
         has_lead_gleego || false,
+        has_doc_signatures || false,
         price || 0,
         billing_period || 'monthly',
         visible_on_signup || false,
