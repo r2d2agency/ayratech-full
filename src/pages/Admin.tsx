@@ -1963,6 +1963,99 @@ export default function Admin() {
                 </div>
               </CardContent>
             </Card>
+            {/* Doc Signature SMTP */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  SMTP de Assinatura de Documentos
+                </CardTitle>
+                <CardDescription>
+                  Configuração de e-mail usado para enviar códigos de verificação (OTP) no módulo de assinaturas eletrônicas. Este SMTP é usado como padrão do sistema.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Servidor SMTP</Label>
+                    <Input
+                      placeholder="smtp.gmail.com"
+                      value={docSmtpHost}
+                      onChange={(e) => setDocSmtpHost(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Porta</Label>
+                    <Input
+                      type="number"
+                      placeholder="587"
+                      value={docSmtpPort}
+                      onChange={(e) => setDocSmtpPort(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Switch checked={docSmtpSecure} onCheckedChange={setDocSmtpSecure} />
+                  <Label>Usar TLS/SSL</Label>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Usuário (login)</Label>
+                    <Input
+                      placeholder="email@dominio.com"
+                      value={docSmtpUsername}
+                      onChange={(e) => setDocSmtpUsername(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Senha</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type={showDocSmtpPassword ? 'text' : 'password'}
+                        placeholder="••••••••"
+                        value={docSmtpPassword}
+                        onChange={(e) => setDocSmtpPassword(e.target.value)}
+                      />
+                      <Button variant="ghost" size="icon" onClick={() => setShowDocSmtpPassword(!showDocSmtpPassword)}>
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome do remetente</Label>
+                    <Input
+                      placeholder="Assinaturas Digitais"
+                      value={docSmtpFromName}
+                      onChange={(e) => setDocSmtpFromName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>E-mail do remetente</Label>
+                    <Input
+                      type="email"
+                      placeholder="assinaturas@suaempresa.com"
+                      value={docSmtpFromEmail}
+                      onChange={(e) => setDocSmtpFromEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleSaveDocSmtp} disabled={savingDocSmtp}>
+                    {savingDocSmtp && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Salvar SMTP
+                  </Button>
+                  <Button variant="outline" onClick={handleTestDocSmtp} disabled={testingDocSmtp || !docSmtpHost}>
+                    {testingDocSmtp && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Enviar Teste
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Quando configurado, este SMTP será usado como fallback para enviar e-mails de verificação OTP no módulo de assinaturas, caso a organização não tenha SMTP próprio.
+                </p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Global Agents Tab */}
