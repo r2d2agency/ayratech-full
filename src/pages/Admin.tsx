@@ -440,6 +440,7 @@ export default function Admin() {
       has_ghost: editingPlan.has_ghost,
       has_projects: editingPlan.has_projects,
       has_lead_gleego: editingPlan.has_lead_gleego,
+      has_doc_signatures: editingPlan.has_doc_signatures,
       price: editingPlan.price,
       billing_period: editingPlan.billing_period,
       is_active: editingPlan.is_active,
