@@ -427,6 +427,7 @@ router.post('/plans', requireSuperadmin, async (req, res) => {
       has_ghost,
       has_projects,
       has_lead_gleego,
+      has_doc_signatures,
       price, 
       billing_period,
       visible_on_signup,
