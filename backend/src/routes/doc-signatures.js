@@ -147,7 +147,7 @@ async function sendOtpEmail(signerEmail, signerName, code, docTitle, orgId) {
 
   // Fallback: try any active SMTP config
   if (!smtpConfig) {
-    const r = await query(`SELECT * FROM smtp_configs WHERE is_active = true LIMIT 1`);
+    const r = await query(`SELECT * FROM email_smtp_configs WHERE is_active = true LIMIT 1`);
     smtpConfig = r.rows[0] || null;
   }
 
