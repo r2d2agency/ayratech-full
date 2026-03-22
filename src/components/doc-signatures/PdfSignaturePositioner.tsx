@@ -86,6 +86,7 @@ export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, on
 
   const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly || !selectedSigner || dragging || resizing) return;
+    if (justDragged.current) { justDragged.current = false; return; }
 
     const rect = e.currentTarget.getBoundingClientRect();
     const x = (e.clientX - rect.left) / scale;
