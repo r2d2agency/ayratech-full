@@ -154,6 +154,9 @@ export function PdfSignaturePositioner({ fileUrl, signers, existingPositions, on
   }, [dragging, resizing, dragOffset, scale]);
 
   const handleMouseUp = () => {
+    if (dragging || resizing) {
+      justDragged.current = true;
+    }
     setDragging(null);
     setResizing(null);
   };
