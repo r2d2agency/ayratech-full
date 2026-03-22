@@ -55,6 +55,21 @@ export interface AuditLog {
   created_at: string;
 }
 
+const toNumber = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const normalizePosition = (position: any): SignaturePosition => ({
+  id: position.id,
+  signer_id: position.signer_id,
+  page: Math.max(1, Math.round(toNumber(position.page, 1))),
+  x: toNumber(position.x, 0),
+  y: toNumber(position.y, 0),
+  width: Math.max(100, toNumber(position.width, 200)),
+  height: Math.max(40, toNumber(position.height, 80)),
+});
+
 export function useDocSignatures() {
   const [loading, setLoading] = useState(false);
 
@@ -78,7 +93,11 @@ export function useDocSignatures() {
     try {
       const res = await fetch(`${API_URL}/api/doc-signatures/${id}`, { headers: getHeaders() });
       if (!res.ok) throw new Error('Erro ao buscar documento');
-      return res.json();
+      const data = await res.json();
+      return {
+        ...data,
+        positions: Array.isArray(data.positions) ? data.positions.map(normalizePosition) : [],
+      };
     } catch (err) {
       console.error(err);
       return null;
@@ -141,10 +160,19 @@ export function useDocSignatures() {
 
   const savePositions = useCallback(async (documentId: string, positions: { signer_id: string; page: number; x: number; y: number; width: number; height: number }[]): Promise<boolean> => {
     try {
+      const normalizedPositions = positions.map((position) => ({
+        signer_id: position.signer_id,
+        page: Math.max(1, Math.round(toNumber(position.page, 1))),
+        x: toNumber(position.x, 0),
+        y: toNumber(position.y, 0),
+        width: Math.max(100, toNumber(position.width, 200)),
+        height: Math.max(40, toNumber(position.height, 80)),
+      }));
+
       const res = await fetch(`${API_URL}/api/doc-signatures/${documentId}/positions`, {
         method: 'PUT',
         headers: getHeaders(),
-        body: JSON.stringify({ positions })
+        body: JSON.stringify({ positions: normalizedPositions })
       });
       return res.ok;
     } catch {
@@ -189,7 +217,11 @@ export function useDocSignatures() {
     try {
       const res = await fetch(`${API_URL}/api/doc-signatures/sign/${token}`);
       if (!res.ok) throw new Error('Link inválido ou expirado');
-      return res.json();
+      const data = await res.json();
+      return {
+        ...data,
+        positions: Array.isArray(data.positions) ? data.positions.map(normalizePosition) : [],
+      };
     } catch (err: any) {
       throw err;
     }
