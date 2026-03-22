@@ -434,7 +434,9 @@ router.post('/sign/:token', async (req, res) => {
       [signer.doc_id]
     );
 
-    if (parseInt(pendingResult.rows[0].pending) === 0) {
+    const allSigned = parseInt(pendingResult.rows[0].pending) === 0;
+
+    if (allSigned) {
       await query(`UPDATE doc_signature_documents SET status = 'completed', updated_at = NOW() WHERE id = $1`, [signer.doc_id]);
       await auditLog(signer.doc_id, 'document_completed', {
         name: 'Sistema', email: 'system', ip, userAgent,
@@ -442,11 +444,15 @@ router.post('/sign/:token', async (req, res) => {
       });
     }
 
-    // Return download URL so signer can download
-    const docResult = await query(`SELECT file_url, signed_file_url FROM doc_signature_documents WHERE id = $1`, [signer.doc_id]);
-    const downloadUrl = docResult.rows[0]?.signed_file_url || docResult.rows[0]?.file_url;
+    // Generate signed PDF with all current signatures embedded
+    let signedPdfUrl = null;
+    try {
+      signedPdfUrl = await generateSignedPdf(signer.doc_id);
+    } catch (pdfErr) {
+      console.error('[doc-signatures] PDF generation error:', pdfErr.message);
+    }
 
-    res.json({ success: true, download_url: downloadUrl });
+    res.json({ success: true, signed_pdf_url: signedPdfUrl, download_url: signedPdfUrl });
   } catch (error) {
     console.error('[doc-signatures] Submit signature error:', error);
     res.status(500).json({ error: 'Erro ao processar assinatura' });
