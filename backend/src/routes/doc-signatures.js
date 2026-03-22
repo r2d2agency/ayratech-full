@@ -578,6 +578,12 @@ router.post('/sign/:token/request-otp', async (req, res) => {
     const sent = await sendOtpEmail(signer.email, signer.name, code, signer.title, signer.organization_id);
     if (!sent) return res.status(500).json({ error: 'Erro ao enviar código de verificação. Tente novamente.' });
 
+    await auditLog(signer.document_id, 'otp_requested', {
+      name: signer.name, email: signer.email,
+      ip: getClientIp(req), userAgent: req.headers['user-agent'],
+      details: { masked_email: maskedEmail }
+    });
+
     res.json({
       success: true,
       masked_email: maskedEmail,
@@ -637,6 +643,18 @@ router.post('/sign/:token/verify-otp', async (req, res) => {
 
     // Mark as verified
     await query(`UPDATE doc_signature_otp SET verified = true WHERE id = $1`, [otp.id]);
+
+    // Audit: identity verified
+    const signerDetail = await query(
+      `SELECT s.name, s.email, s.document_id FROM doc_signature_signers s WHERE s.id = $1`, [signer.id]
+    );
+    if (signerDetail.rows[0]) {
+      await auditLog(signerDetail.rows[0].document_id, 'otp_verified', {
+        name: signerDetail.rows[0].name, email: signerDetail.rows[0].email,
+        ip: getClientIp(req), userAgent: req.headers['user-agent'],
+        details: { verified_at: new Date().toISOString() }
+      });
+    }
 
     res.json({ success: true, verified: true });
   } catch (error) {
