@@ -614,6 +614,7 @@ router.post('/plans/sync-all', requireSuperadmin, async (req, res) => {
         group_secretary: plan.has_group_secretary ?? false,
         projects: plan.has_projects ?? false,
         lead_gleego: plan.has_lead_gleego ?? false,
+        doc_signatures: plan.has_doc_signatures ?? false,
       };
 
       console.log(`[sync-all] Plan "${plan.name}" (${plan.id}) modules:`, modulesEnabled);
