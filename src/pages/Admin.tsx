@@ -68,6 +68,7 @@ interface Plan {
   has_ghost: boolean;
   has_projects: boolean;
   has_lead_gleego: boolean;
+  has_doc_signatures: boolean;
   price: number;
   billing_period: string;
   is_active: boolean;
