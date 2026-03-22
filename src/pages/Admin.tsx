@@ -409,6 +409,7 @@ export default function Admin() {
     setNewPlanGhost(false);
     setNewPlanProjects(false);
     setNewPlanLeadGleego(false);
+    setNewPlanDocSignatures(false);
     setNewPlanPeriod('monthly');
     setNewPlanVisibleOnSignup(false);
     setNewPlanTrialDays('3');
