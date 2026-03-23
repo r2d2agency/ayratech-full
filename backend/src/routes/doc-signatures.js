@@ -721,10 +721,13 @@ router.get('/sign/:token', async (req, res) => {
       [signer.id]
     );
 
+    const normalizedSignerFileUrl = normalizeDocumentFileUrl(signer.file_url);
+    const signerFileUrl = toAbsoluteFileUrl(req, normalizedSignerFileUrl) || normalizedSignerFileUrl;
+
     res.json({
       document_title: signer.title,
       document_description: signer.description || null,
-      file_url: normalizeDocumentFileUrl(signer.file_url),
+      file_url: signerFileUrl,
       org_name: signer.org_name || null,
       org_logo_url: signer.org_logo_url || null,
       signer: {
@@ -909,7 +912,16 @@ router.get('/', async (req, res) => {
        ORDER BY d.created_at DESC`,
       [orgId]
     );
-    res.json(result.rows);
+    const documents = result.rows.map((doc) => {
+      const normalizedFileUrl = normalizeDocumentFileUrl(doc.file_url);
+      return {
+        ...doc,
+        file_url: toAbsoluteFileUrl(req, normalizedFileUrl) || normalizedFileUrl,
+        signed_file_url: toAbsoluteFileUrl(req, doc.signed_file_url) || doc.signed_file_url,
+      };
+    });
+
+    res.json(documents);
   } catch (error) {
     console.error('[doc-signatures] List error:', error);
     res.status(500).json({ error: 'Erro ao listar documentos' });
@@ -932,10 +944,12 @@ router.get('/:id', async (req, res) => {
 
     const document = docResult.rows[0];
 
+    const normalizedFileUrl = normalizeDocumentFileUrl(document.file_url);
+
     res.json({
       document: {
         ...document,
-        file_url: normalizeDocumentFileUrl(document.file_url),
+        file_url: toAbsoluteFileUrl(req, normalizedFileUrl) || normalizedFileUrl,
       },
       signers: signersResult.rows,
       positions: positionsResult.rows,
@@ -976,9 +990,11 @@ router.post('/', async (req, res) => {
       details: { title, file_url: normalizedFileUrl }
     });
 
+    const createdNormalizedFileUrl = normalizeDocumentFileUrl(doc.file_url);
+
     res.status(201).json({
       ...doc,
-      file_url: normalizeDocumentFileUrl(doc.file_url),
+      file_url: toAbsoluteFileUrl(req, createdNormalizedFileUrl) || createdNormalizedFileUrl,
     });
   } catch (error) {
     console.error('[doc-signatures] Create error:', error);

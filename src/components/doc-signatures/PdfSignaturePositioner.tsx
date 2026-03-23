@@ -58,6 +58,7 @@ export function PdfSignaturePositioner({
   auditPreviewBySigner,
 }: Props) {
   const [numPages, setNumPages] = useState(0);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [scale, setScale] = useState(1);
   const [boxes, setBoxes] = useState<DraggableBox[]>([]);
@@ -105,7 +106,18 @@ export function PdfSignaturePositioner({
 
   const handleDocumentLoadSuccess = ({ numPages: n }: { numPages: number }) => {
     setNumPages(n);
+    setPdfError(null);
   };
+
+  const handleDocumentLoadError = useCallback((error: Error) => {
+    const message = error?.message?.trim() || 'Falha ao ler o arquivo PDF.';
+    setPdfError(message);
+    console.error('[PdfSignaturePositioner] Erro ao carregar PDF:', {
+      fileUrl,
+      resolvedUrl: resolveMediaUrl(fileUrl),
+      message,
+    });
+  }, [fileUrl]);
 
   const handlePageClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (readOnly || !addMode || !selectedSigner || dragging || resizing) return;
@@ -247,6 +259,11 @@ export function PdfSignaturePositioner({
   };
 
   const resolvedUrl = resolveMediaUrl(fileUrl);
+
+  useEffect(() => {
+    setPdfError(null);
+  }, [resolvedUrl]);
+
   const currentPageBoxes = boxes.filter(b => b.page === currentPage);
   const previewSignatures = previewSignatureBySigner ?? {};
   const previewAudit = auditPreviewBySigner ?? {};
@@ -339,8 +356,15 @@ export function PdfSignaturePositioner({
           <Document
             file={resolvedUrl}
             onLoadSuccess={handleDocumentLoadSuccess}
+            onLoadError={handleDocumentLoadError}
+            onSourceError={handleDocumentLoadError}
             loading={<div className="flex items-center justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
-            error={<div className="p-10 text-center text-destructive">Erro ao carregar PDF. Verifique o arquivo.</div>}
+            error={
+              <div className="p-10 text-center text-destructive space-y-1">
+                <p>Erro ao carregar PDF. Verifique o arquivo.</p>
+                {pdfError && <p className="text-xs text-muted-foreground">{pdfError}</p>}
+              </div>
+            }
           >
             <div
               ref={surfaceRef}
