@@ -207,8 +207,8 @@ export default function Assinaturas() {
                 <p className="text-sm">Clique em "Novo Documento" para começar</p>
               </div>
             ) : (
-              {/* Mobile: card layout */}
-              <div className="md:hidden divide-y">
+              <>
+              <div className="md:hidden divide-y divide-border">
                 {documents.map((doc) => {
                   const status = statusConfig[doc.status] || statusConfig.draft;
                   const StatusIcon = status.icon;
@@ -262,7 +262,6 @@ export default function Assinaturas() {
                 })}
               </div>
 
-              {/* Desktop: table layout */}
               <div className="hidden md:block overflow-x-auto">
                 <Table>
                   <TableHeader>
@@ -334,6 +333,7 @@ export default function Assinaturas() {
                   </TableBody>
                 </Table>
               </div>
+              </>
             )}
           </CardContent>
         </Card>
