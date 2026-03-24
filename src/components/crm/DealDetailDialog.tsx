@@ -1689,6 +1689,55 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
               </TabsContent>
             )}
 
+            {docSignaturesEnabled && (
+              <TabsContent value="documents" className="m-0">
+                <div className="space-y-4">
+                  <div className="flex justify-end">
+                    <Button size="sm" onClick={() => setShowSignatureDialog(true)} className="gap-2">
+                      <FileSignature className="h-4 w-4" />
+                      Solicitar Assinatura
+                    </Button>
+                  </div>
+                  {loadingDocuments ? (
+                    <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+                  ) : dealDocuments.length > 0 ? (
+                    <div className="space-y-3">
+                      {dealDocuments.map((doc) => {
+                        const statusMap: Record<string, { label: string; className: string }> = {
+                          draft: { label: 'Rascunho', className: 'bg-muted text-muted-foreground' },
+                          pending: { label: 'Aguardando', className: 'bg-primary/10 text-primary' },
+                          completed: { label: 'Concluído', className: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
+                          cancelled: { label: 'Cancelado', className: 'bg-destructive/10 text-destructive' },
+                        };
+                        const status = statusMap[doc.status] || statusMap.draft;
+                        return (
+                          <Card key={doc.id} className="p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 min-w-0">
+                                <FileSignature className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{doc.title}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(parseISO(doc.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                    {doc.signers_count > 0 && ` • ${doc.signed_count}/${doc.signers_count} assinaturas`}
+                                  </p>
+                                </div>
+                              </div>
+                              <Badge variant="outline" className={cn("text-xs flex-shrink-0", status.className)}>
+                                {status.label}
+                              </Badge>
+                            </div>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">Nenhum documento vinculado a esta negociação</p>
+                  )}
+                </div>
+              </TabsContent>
+            )}
+
             <TabsContent value="history" className="m-0">
               <div className="space-y-3">
                 {fullDeal?.history?.map((item: any) => (
