@@ -614,6 +614,12 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
                   Projeto
                 </Button>
               )}
+              {docSignaturesEnabled && (
+                <Button variant="outline" size="sm" onClick={() => { setShowSignatureDialog(true); }} title="Solicitar Assinatura">
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Assinar
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => setShowSequenceDialog(true)} title="Inscrever em Sequência de Nurturing">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Sequência
