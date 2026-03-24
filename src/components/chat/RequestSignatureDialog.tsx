@@ -125,7 +125,7 @@ export function RequestSignatureDialog({ open, onOpenChange, contactName, contac
           </div>
           <div className="space-y-2">
             <Label>Arquivo PDF *</Label>
-            <FileUploadInput accept="application/pdf" onUploadComplete={(url) => setFileUrl(url)} value={fileUrl} />
+            <FileUploadInput accept="application/pdf" onChange={(url) => setFileUrl(url)} value={fileUrl} previewType="file" />
           </div>
 
           {/* Signer info */}
