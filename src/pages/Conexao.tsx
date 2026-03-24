@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check, History, Smartphone } from "lucide-react";
+import { Plus, QrCode, RefreshCw, Plug, Unplug, Trash2, Phone, Loader2, Wifi, WifiOff, Send, Settings2, AlertTriangle, CheckCircle, Eye, Activity, Users, Download, Pencil, UserCheck, MessageSquare, Check, History, Smartphone, Globe, Copy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { api } from "@/lib/api";
+import { api, API_URL } from "@/lib/api";
 import { toast } from "sonner";
 import { TestMessageDialog } from "@/components/conexao/TestMessageDialog";
 import { WebhookDiagnosticPanel } from "@/components/conexao/WebhookDiagnosticPanel";
@@ -31,6 +31,7 @@ interface Connection {
   show_groups?: boolean;
   meta_phone_number_id?: string;
   meta_waba_id?: string;
+  meta_webhook_verify_token?: string;
   created_at: string;
 }
 
@@ -1017,6 +1018,64 @@ const handleGetQRCode = async (connection: Connection) => {
                       }}
                     />
                   </div>
+                  )}
+
+                  {/* Meta Webhook Config */}
+                  {connection.provider === 'meta' && (
+                    <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Globe className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm font-medium">Configuração do Webhook</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Configure estes dados na aba <strong>Configuração</strong> do seu app no Meta Business Suite:
+                      </p>
+                      <div className="space-y-1.5">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">URL de callback</Label>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-background px-2 py-1 rounded border flex-1 break-all">
+                              {`${API_URL}/api/meta/webhook`}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 shrink-0"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${API_URL}/api/meta/webhook`);
+                                toast.success('URL copiada!');
+                              }}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Verificar token</Label>
+                          <div className="flex items-center gap-1">
+                            <code className="text-xs bg-background px-2 py-1 rounded border flex-1 break-all">
+                              {connection.meta_webhook_verify_token || 'Não gerado'}
+                            </code>
+                            {connection.meta_webhook_verify_token && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 shrink-0"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(connection.meta_webhook_verify_token!);
+                                  toast.success('Token copiado!');
+                                }}
+                              >
+                                <Copy className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Após configurar, clique em "Verificar e salvar" no Meta Business Suite.
+                      </p>
+                    </div>
                   )}
 
                   {/* Lead Distribution Button */}
