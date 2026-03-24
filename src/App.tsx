@@ -59,6 +59,7 @@ import ApiDocumentation from "./pages/ApiDocumentation";
 import MetaTemplates from "./pages/MetaTemplates";
 import Assinaturas from "./pages/Assinaturas";
 import AssinarDocumento from "./pages/AssinarDocumento";
+import VerificarDocumento from "./pages/VerificarDocumento";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -159,6 +160,7 @@ const App = () => (
             <Route path="/api-docs" element={<ApiDocumentation />} />
             <Route path="/f/:slug" element={<PublicFormPage />} />
             <Route path="/assinar/:token" element={<AssinarDocumento />} />
+            <Route path="/verificar/:documentId" element={<VerificarDocumento />} />
             <Route path="/politica-privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/termos-servico" element={<TermosServico />} />
             <Route path="/exclusao-dados" element={<ExclusaoDados />} />

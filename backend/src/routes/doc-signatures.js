@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 import { query } from '../db.js';
@@ -307,11 +308,22 @@ async function sendOtpEmail(signerEmail, signerName, code, docTitle, orgId) {
   }
 }
 
+// Helper: extract frontend base URL from request
+function getFrontendBaseUrl(req) {
+  if (req?.headers?.origin) return req.headers.origin;
+  if (req?.headers?.referer) {
+    try { return new URL(req.headers.referer).origin; } catch { /* ignore */ }
+  }
+  const proto = req?.protocol || 'https';
+  const host = req?.headers?.host || 'localhost';
+  return `${proto}://${host}`;
+}
+
 // ===========================
 // PDF GENERATION WITH SIGNATURES
 // ===========================
 
-async function generateSignedPdf(documentId) {
+async function generateSignedPdf(documentId, baseUrl) {
   // 1. Get document info
   const docResult = await query(`SELECT file_url FROM doc_signature_documents WHERE id = $1`, [documentId]);
   if (!docResult.rows[0]) throw new Error('Document not found');
@@ -531,17 +543,31 @@ async function generateSignedPdf(documentId) {
     return null;
   }
 
-  // 7. Add legal validity footer to every page
+  // 7. Add legal validity footer with QR code to every page
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const footerFontSize = 6.5;
   const footerLineHeight = 8.5;
   const footerPadding = 6;
+  const qrSize = 48;
+
+  const verifyUrl = baseUrl ? `${baseUrl}/verificar/${documentId}` : `https://app.example.com/verificar/${documentId}`;
+
+  // Generate QR code as PNG buffer
+  let qrImage = null;
+  try {
+    const qrBuffer = await QRCode.toBuffer(verifyUrl, { type: 'png', width: 200, margin: 1 });
+    qrImage = await pdfDoc.embedPng(qrBuffer);
+  } catch (qrErr) {
+    console.error('[doc-signatures] QR code generation error:', qrErr.message);
+  }
+
   const footerLines = [
     'DOCUMENTO ASSINADO ELETRONICAMENTE',
-    'Validade jurídica conforme MP 2.200-2/2001 (Art. 10, §2º) e Lei 14.063/2020 (Assinatura Eletrônica Simples).',
-    `Verificação: ${documentId} | Hash SHA-256 do documento original registrado no sistema.`,
+    'Validade jurídica conforme MP 2.200-2/2001 (Art. 10, §2º) e Lei 14.063/2020.',
+    `Verifique: ${verifyUrl}`,
   ];
   const footerBoxHeight = footerPadding * 2 + (footerLines.length * footerLineHeight) + 2;
+  const effectiveFooterBoxHeight = Math.max(footerBoxHeight, qrImage ? qrSize + footerPadding * 2 : footerBoxHeight);
 
   for (let pi = 0; pi < pages.length; pi++) {
     const pg = pages[pi];
@@ -549,41 +575,52 @@ async function generateSignedPdf(documentId) {
     const footerY = 6;
     const footerX = 24;
     const footerW = pgW - 48;
+    const textOffsetX = qrImage ? qrSize + footerPadding * 2 : footerPadding;
 
     // Background
     pg.drawRectangle({
       x: footerX,
       y: footerY,
       width: footerW,
-      height: footerBoxHeight,
+      height: effectiveFooterBoxHeight,
       color: rgb(0.96, 0.97, 0.98),
       borderColor: rgb(0.7, 0.75, 0.8),
       borderWidth: 0.5,
     });
 
-    // Green accent line at top of footer
+    // Green accent line at top
     pg.drawRectangle({
       x: footerX,
-      y: footerY + footerBoxHeight - 1.5,
+      y: footerY + effectiveFooterBoxHeight - 1.5,
       width: footerW,
       height: 1.5,
       color: rgb(0.13, 0.55, 0.13),
     });
 
+    // QR code on the left
+    if (qrImage) {
+      pg.drawImage(qrImage, {
+        x: footerX + footerPadding,
+        y: footerY + (effectiveFooterBoxHeight - qrSize) / 2,
+        width: qrSize,
+        height: qrSize,
+      });
+    }
+
     // Title line (bold)
     pg.drawText(footerLines[0], {
-      x: footerX + footerPadding,
-      y: footerY + footerBoxHeight - footerPadding - footerFontSize,
+      x: footerX + textOffsetX,
+      y: footerY + effectiveFooterBoxHeight - footerPadding - footerFontSize,
       size: footerFontSize,
       font: boldFont,
       color: rgb(0.13, 0.55, 0.13),
     });
 
-    // Remaining lines (regular)
+    // Remaining lines
     for (let li = 1; li < footerLines.length; li++) {
       pg.drawText(footerLines[li], {
-        x: footerX + footerPadding,
-        y: footerY + footerBoxHeight - footerPadding - footerFontSize - (li * footerLineHeight),
+        x: footerX + textOffsetX,
+        y: footerY + effectiveFooterBoxHeight - footerPadding - footerFontSize - (li * footerLineHeight),
         size: footerFontSize,
         font: infoFont,
         color: rgb(0.25, 0.25, 0.25),
@@ -620,6 +657,64 @@ async function generateSignedPdf(documentId) {
 // ===========================
 // PUBLIC ROUTES (before auth)
 // ===========================
+
+// Public: Verify document authenticity
+router.get('/verify/:documentId', async (req, res) => {
+  try {
+    const { documentId } = req.params;
+    const docResult = await query(
+      `SELECT d.id, d.title, d.description, d.status, d.hash_sha256, d.created_at,
+              o.name as org_name
+       FROM doc_signature_documents d
+       LEFT JOIN organizations o ON o.id = d.organization_id
+       WHERE d.id = $1`,
+      [documentId]
+    );
+    if (docResult.rows.length === 0) return res.status(404).json({ error: 'Documento não encontrado' });
+
+    const doc = docResult.rows[0];
+
+    const signersResult = await query(
+      `SELECT name, cpf, role, status, signed_at, ip_address, geolocation
+       FROM doc_signature_signers WHERE document_id = $1 ORDER BY sign_order`,
+      [documentId]
+    );
+
+    const signers = signersResult.rows.map(s => ({
+      name: s.name,
+      cpf_masked: s.cpf ? s.cpf.replace(/(\d{3})\.\d{3}\.\d{3}-(\d{2})/, '$1.***.***-$2').replace(/(\d{3})\d{3}\d{3}(\d{2})/, '$1.***.***-$2') : '***',
+      role: s.role,
+      status: s.status,
+      signed_at: s.signed_at,
+      ip_address: s.ip_address,
+      geolocation: s.geolocation,
+    }));
+
+    const auditResult = await query(
+      `SELECT action, actor_name, actor_email, ip_address, geolocation, created_at
+       FROM doc_signature_audit WHERE document_id = $1 ORDER BY created_at DESC`,
+      [documentId]
+    );
+
+    res.json({
+      document: {
+        id: doc.id,
+        title: doc.title,
+        description: doc.description,
+        status: doc.status,
+        hash_sha256: doc.hash_sha256,
+        created_at: doc.created_at,
+        org_name: doc.org_name,
+      },
+      signers,
+      audit: auditResult.rows,
+    });
+  } catch (error) {
+    console.error('[doc-signatures] Verify error:', error);
+    res.status(500).json({ error: 'Erro ao verificar documento' });
+  }
+});
+
 
 // Step 1: Request OTP - sends verification code to signer's email
 router.post('/sign/:token/request-otp', async (req, res) => {
@@ -879,7 +974,7 @@ router.post('/sign/:token', async (req, res) => {
     // Generate signed PDF with all current signatures embedded
     let signedPdfUrl = null;
     try {
-      signedPdfUrl = await generateSignedPdf(signer.doc_id);
+      signedPdfUrl = await generateSignedPdf(signer.doc_id, getFrontendBaseUrl(req));
     } catch (pdfErr) {
       console.error('[doc-signatures] PDF generation error:', pdfErr.message);
     }
@@ -927,7 +1022,7 @@ router.get('/sign/:token/download', async (req, res) => {
     let downloadUrl = signer.signed_file_url;
     if (!downloadUrl) {
       try {
-        downloadUrl = await generateSignedPdf(signer.doc_id);
+        downloadUrl = await generateSignedPdf(signer.doc_id, getFrontendBaseUrl(req));
       } catch (generationError) {
         console.error('[doc-signatures] Public download generation error:', generationError.message);
       }
@@ -1215,7 +1310,7 @@ router.get('/:id/download', async (req, res) => {
 
     if (!downloadUrl) {
       try {
-        downloadUrl = await generateSignedPdf(req.params.id);
+        downloadUrl = await generateSignedPdf(req.params.id, getFrontendBaseUrl(req));
       } catch (generationError) {
         console.error('[doc-signatures] On-demand PDF generation error:', generationError.message);
       }
