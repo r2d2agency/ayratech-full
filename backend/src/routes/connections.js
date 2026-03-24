@@ -240,9 +240,12 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Generate webhook verify token for Meta connections
+    const metaWebhookVerifyToken = provider === 'meta' ? crypto.randomBytes(16).toString('hex') : null;
+
     const result = await query(
-      `INSERT INTO connections (user_id, organization_id, provider, api_url, api_key, instance_name, instance_id, wapi_token, name, meta_token, meta_phone_number_id, meta_waba_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      `INSERT INTO connections (user_id, organization_id, provider, api_url, api_key, instance_name, instance_id, wapi_token, name, meta_token, meta_phone_number_id, meta_waba_id, meta_webhook_verify_token)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13) RETURNING *`,
       [
         req.userId, 
         org?.organization_id || null, 
@@ -256,6 +259,7 @@ router.post('/', async (req, res) => {
         meta_token || null,
         meta_phone_number_id || null,
         meta_waba_id || null,
+        metaWebhookVerifyToken,
       ]
     );
 
