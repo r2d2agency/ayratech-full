@@ -189,7 +189,7 @@ export function useDocSignatures() {
     }
   }, []);
 
-  const createDocument = useCallback(async (data: { title: string; description?: string; file_url: string }): Promise<DocSignatureDocument | null> => {
+  const createDocument = useCallback(async (data: { title: string; description?: string; file_url: string; deal_id?: string }): Promise<DocSignatureDocument | null> => {
     setLoading(true);
     try {
       const normalizedFileUrl = normalizeDocumentFileUrl(data.file_url, { preferRelative: true });
