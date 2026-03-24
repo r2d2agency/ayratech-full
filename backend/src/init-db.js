@@ -234,6 +234,7 @@ DO $$ BEGIN
     ALTER TABLE connections ADD COLUMN IF NOT EXISTS meta_token TEXT;
     ALTER TABLE connections ADD COLUMN IF NOT EXISTS meta_phone_number_id VARCHAR(255);
     ALTER TABLE connections ADD COLUMN IF NOT EXISTS meta_waba_id VARCHAR(255);
+    ALTER TABLE connections ADD COLUMN IF NOT EXISTS meta_webhook_verify_token VARCHAR(255);
 EXCEPTION
     WHEN duplicate_column THEN null;
 END $$;

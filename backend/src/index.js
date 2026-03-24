@@ -164,6 +164,210 @@ app.use('/uploads', (req, res, next) => {
 }));
 
 
+// ===========================
+// Meta Cloud API Webhook (public - no auth)
+// ===========================
+import { query as dbQuery } from './db.js';
+
+// GET: Meta webhook verification (hub.verify_token challenge)
+app.get('/api/meta/webhook', async (req, res) => {
+  const mode = req.query['hub.mode'];
+  const token = req.query['hub.verify_token'];
+  const challenge = req.query['hub.challenge'];
+
+  if (mode !== 'subscribe' || !token) {
+    return res.sendStatus(403);
+  }
+
+  try {
+    // Find a Meta connection with this verify token
+    const result = await dbQuery(
+      `SELECT id FROM connections WHERE provider = 'meta' AND meta_webhook_verify_token = $1 LIMIT 1`,
+      [token]
+    );
+    if (result.rows.length === 0) {
+      console.log('[Meta Webhook] Verify token not found:', token);
+      return res.sendStatus(403);
+    }
+    console.log('[Meta Webhook] Verification successful for connection:', result.rows[0].id);
+    return res.status(200).send(challenge);
+  } catch (err) {
+    console.error('[Meta Webhook] Verification error:', err.message);
+    return res.sendStatus(500);
+  }
+});
+
+// POST: Meta webhook incoming messages
+app.post('/api/meta/webhook', async (req, res) => {
+  // Always respond 200 immediately to Meta
+  res.sendStatus(200);
+
+  try {
+    const body = req.body;
+    if (!body?.object || body.object !== 'whatsapp_business_account') return;
+
+    for (const entry of (body.entry || [])) {
+      for (const change of (entry.changes || [])) {
+        if (change.field !== 'messages') continue;
+        const value = change.value;
+        if (!value) continue;
+
+        const phoneNumberId = value.metadata?.phone_number_id;
+        if (!phoneNumberId) continue;
+
+        // Find the connection for this phone number ID
+        const connResult = await dbQuery(
+          `SELECT * FROM connections WHERE provider = 'meta' AND meta_phone_number_id = $1 LIMIT 1`,
+          [phoneNumberId]
+        );
+        if (connResult.rows.length === 0) {
+          console.log('[Meta Webhook] No connection found for phone_number_id:', phoneNumberId);
+          continue;
+        }
+
+        const connection = connResult.rows[0];
+
+        // Process incoming messages
+        for (const message of (value.messages || [])) {
+          try {
+            const from = message.from; // sender phone
+            const msgType = message.type;
+            let content = '';
+            let mediaUrl = null;
+
+            switch (msgType) {
+              case 'text':
+                content = message.text?.body || '';
+                break;
+              case 'image':
+                content = message.image?.caption || '[Imagem]';
+                mediaUrl = message.image?.id; // Media ID, needs download
+                break;
+              case 'video':
+                content = message.video?.caption || '[Vídeo]';
+                mediaUrl = message.video?.id;
+                break;
+              case 'audio':
+                content = '[Áudio]';
+                mediaUrl = message.audio?.id;
+                break;
+              case 'document':
+                content = message.document?.caption || message.document?.filename || '[Documento]';
+                mediaUrl = message.document?.id;
+                break;
+              case 'sticker':
+                content = '[Sticker]';
+                mediaUrl = message.sticker?.id;
+                break;
+              case 'location':
+                content = `[Localização: ${message.location?.latitude}, ${message.location?.longitude}]`;
+                break;
+              case 'contacts':
+                content = `[Contato: ${message.contacts?.[0]?.name?.formatted_name || ''}]`;
+                break;
+              case 'reaction':
+                content = message.reaction?.emoji || '👍';
+                break;
+              default:
+                content = `[${msgType}]`;
+            }
+
+            // Download media if needed
+            let finalMediaUrl = null;
+            if (mediaUrl && connection.meta_token) {
+              try {
+                const mediaInfoRes = await fetch(`https://graph.facebook.com/v21.0/${mediaUrl}`, {
+                  headers: { Authorization: `Bearer ${connection.meta_token}` }
+                });
+                if (mediaInfoRes.ok) {
+                  const mediaInfo = await mediaInfoRes.json();
+                  finalMediaUrl = mediaInfo.url; // Temporary URL from Meta
+                }
+              } catch (mediaErr) {
+                console.error('[Meta Webhook] Media download error:', mediaErr.message);
+              }
+            }
+
+            // Normalize phone
+            const normalizedPhone = from.replace(/\D/g, '');
+            const contactName = value.contacts?.[0]?.profile?.name || normalizedPhone;
+
+            // Find or create contact
+            let contactResult = await dbQuery(
+              `SELECT id FROM contacts WHERE phone = $1 AND organization_id = $2 LIMIT 1`,
+              [normalizedPhone, connection.organization_id]
+            );
+
+            if (contactResult.rows.length === 0) {
+              contactResult = await dbQuery(
+                `INSERT INTO contacts (phone, name, organization_id) VALUES ($1, $2, $3) RETURNING id`,
+                [normalizedPhone, contactName, connection.organization_id]
+              );
+            }
+            const contactId = contactResult.rows[0].id;
+
+            // Find or create conversation
+            let convResult = await dbQuery(
+              `SELECT id FROM conversations WHERE contact_id = $1 AND connection_id = $2 LIMIT 1`,
+              [contactId, connection.id]
+            );
+
+            if (convResult.rows.length === 0) {
+              convResult = await dbQuery(
+                `INSERT INTO conversations (contact_id, connection_id, organization_id, last_message_at)
+                 VALUES ($1, $2, $3, NOW()) RETURNING id`,
+                [contactId, connection.id, connection.organization_id]
+              );
+            }
+            const conversationId = convResult.rows[0].id;
+
+            // Save message
+            await dbQuery(
+              `INSERT INTO messages (conversation_id, sender, content, media_url, message_type, wamid, timestamp)
+               VALUES ($1, 'contact', $2, $3, $4, $5, NOW())`,
+              [conversationId, content, finalMediaUrl, msgType, message.id]
+            );
+
+            // Update conversation
+            await dbQuery(
+              `UPDATE conversations SET last_message_at = NOW(), unread_count = unread_count + 1 WHERE id = $1`,
+              [conversationId]
+            );
+
+            console.log(`[Meta Webhook] Message saved: ${msgType} from ${normalizedPhone}`);
+          } catch (msgErr) {
+            console.error('[Meta Webhook] Error processing message:', msgErr.message);
+          }
+        }
+
+        // Process status updates
+        for (const status of (value.statuses || [])) {
+          try {
+            const wamid = status.id;
+            const statusValue = status.status; // sent, delivered, read, failed
+            
+            if (statusValue === 'read') {
+              await dbQuery(
+                `UPDATE messages SET read_at = NOW() WHERE wamid = $1 AND read_at IS NULL`,
+                [wamid]
+              );
+            } else if (statusValue === 'delivered') {
+              await dbQuery(
+                `UPDATE messages SET delivered_at = NOW() WHERE wamid = $1 AND delivered_at IS NULL`,
+                [wamid]
+              );
+            }
+          } catch (statusErr) {
+            console.error('[Meta Webhook] Error processing status:', statusErr.message);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error('[Meta Webhook] General error:', error.message);
+  }
+});
+
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/connections', connectionsRoutes);
