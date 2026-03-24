@@ -131,6 +131,7 @@ export function useSuperadmin() {
     has_projects?: boolean;
     has_lead_gleego?: boolean;
     has_doc_signatures?: boolean;
+    doc_signatures_limit?: number;
     price: number;
     billing_period: string;
     visible_on_signup?: boolean;
