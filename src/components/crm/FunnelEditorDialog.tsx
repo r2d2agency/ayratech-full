@@ -127,9 +127,18 @@ export function FunnelEditorDialog({ funnel, open, onOpenChange }: FunnelEditorD
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [color, setColor] = useState("#6366f1");
+  const [connectionId, setConnectionId] = useState<string | null>(null);
+  const [connections, setConnections] = useState<Array<{ id: string; name: string; phone_number?: string; status?: string }>>([]);
   const [stages, setStages] = useState<CRMStage[]>([]);
 
   const { createFunnel, updateFunnel } = useCRMFunnelMutations();
+
+  // Load connections
+  useEffect(() => {
+    if (open) {
+      api<any[]>('/api/connections').then(setConnections).catch(() => {});
+    }
+  }, [open]);
 
   useEffect(() => {
     if (funnel) {
