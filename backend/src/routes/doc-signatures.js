@@ -1310,7 +1310,7 @@ router.get('/:id/download', async (req, res) => {
 
     if (!downloadUrl) {
       try {
-        downloadUrl = await generateSignedPdf(req.params.id);
+        downloadUrl = await generateSignedPdf(req.params.id, getFrontendBaseUrl(req));
       } catch (generationError) {
         console.error('[doc-signatures] On-demand PDF generation error:', generationError.message);
       }
