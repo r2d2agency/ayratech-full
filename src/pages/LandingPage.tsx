@@ -364,6 +364,7 @@ const pricingPlans = [
       { text: "Secretária IA nos grupos", included: true },
       { text: "Disparos em massa", included: true },
       { text: "Consulta IA no chat", included: true },
+      { text: "Assinatura de documentos (30/mês)", included: true },
       { text: "Transferir para IA", included: false },
       { text: "Base de conhecimento IA", included: false },
     ],
