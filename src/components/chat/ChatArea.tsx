@@ -1301,6 +1301,12 @@ export function ChatArea({
       
       <CreateTagDialog open={showTagDialog} onOpenChange={setShowTagDialog} onCreateTag={onCreateTag} />
       <EditContactDialog open={showEditContactDialog} onOpenChange={setShowEditContactDialog} conversation={conversation} />
+      <RequestSignatureDialog
+        open={showSignatureDialog}
+        onOpenChange={setShowSignatureDialog}
+        contactName={conversation?.contact_name || undefined}
+        contactPhone={conversation?.contact_phone || undefined}
+      />
       </div>
 
       {/* Side Panels */}
