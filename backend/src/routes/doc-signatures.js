@@ -106,6 +106,8 @@ async function ensureTables() {
     await query(`ALTER TABLE doc_signature_signers ADD COLUMN IF NOT EXISTS phone VARCHAR(20)`);
     // Add deal_id to documents for CRM integration
     await query(`ALTER TABLE doc_signature_documents ADD COLUMN IF NOT EXISTS deal_id UUID`);
+    // Add doc_signatures_limit to plans (0 = unlimited)
+    await query(`ALTER TABLE plans ADD COLUMN IF NOT EXISTS doc_signatures_limit INTEGER DEFAULT 0`);
 
   } catch (e) {
     console.error('[doc-signatures] Table init error:', e.message);
