@@ -1128,7 +1128,7 @@ router.post('/', async (req, res) => {
     const orgId = await getUserOrgId(req.userId);
     if (!orgId) return res.status(403).json({ error: 'Sem organização' });
 
-    const { title, description, file_url } = req.body;
+    const { title, description, file_url, deal_id } = req.body;
     if (!title || !file_url) return res.status(400).json({ error: 'Título e arquivo são obrigatórios' });
 
     const normalizedFileUrl = normalizeDocumentFileUrl(file_url);
@@ -1137,9 +1137,9 @@ router.post('/', async (req, res) => {
     const user = userResult.rows[0];
 
     const result = await query(
-      `INSERT INTO doc_signature_documents (organization_id, title, description, file_url, created_by)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [orgId, title, description || null, normalizedFileUrl, req.userId]
+      `INSERT INTO doc_signature_documents (organization_id, title, description, file_url, created_by, deal_id)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [orgId, title, description || null, normalizedFileUrl, req.userId, deal_id || null]
     );
 
     const doc = result.rows[0];
@@ -1148,7 +1148,7 @@ router.post('/', async (req, res) => {
       name: user?.name, email: user?.email,
       ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
       userAgent: req.headers['user-agent'],
-      details: { title, file_url: normalizedFileUrl }
+      details: { title, file_url: normalizedFileUrl, deal_id: deal_id || null }
     });
 
     const createdNormalizedFileUrl = normalizeDocumentFileUrl(doc.file_url);
