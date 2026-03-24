@@ -513,6 +513,7 @@ export default function Admin() {
       has_projects: editingPlan.has_projects,
       has_lead_gleego: editingPlan.has_lead_gleego,
       has_doc_signatures: editingPlan.has_doc_signatures,
+      doc_signatures_limit: editingPlan.doc_signatures_limit,
       price: editingPlan.price,
       billing_period: editingPlan.billing_period,
       is_active: editingPlan.is_active,
