@@ -617,6 +617,16 @@ export default function Assinaturas() {
                     )}
                   </div>
                   <div className="flex gap-2">
+                    {selectedDoc.status === 'pending' && signers.some((s: any) => s.phone && s.status === 'pending') && (
+                      <Button variant="outline" onClick={async () => {
+                        try {
+                          const result = await sendSigningLinkWhatsApp(selectedDoc.id);
+                          toast.success(`${result?.sent || 0} link(s) enviado(s) via WhatsApp!`);
+                        } catch (err: any) { toast.error(err.message); }
+                      }} className="gap-1" disabled={actionLoading}>
+                        📱 Enviar via WhatsApp
+                      </Button>
+                    )}
                     {selectedDoc.status === 'draft' && signers.length > 0 && (
                       <Button onClick={handleSend} className="gap-1" disabled={actionLoading}>
                         {actionLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
