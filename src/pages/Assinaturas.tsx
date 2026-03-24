@@ -51,8 +51,9 @@ export default function Assinaturas() {
   const [signerEmail, setSignerEmail] = useState('');
   const [signerCpf, setSignerCpf] = useState('');
   const [signerRole, setSignerRole] = useState('signer');
+  const [signerPhone, setSignerPhone] = useState('');
 
-  const { listDocuments, getDocument, createDocument, addSigner, removeSigner, sendForSignature, cancelDocument, savePositions, downloadSignedPdf, loading: actionLoading } = useDocSignatures();
+  const { listDocuments, getDocument, createDocument, addSigner, removeSigner, sendForSignature, cancelDocument, savePositions, downloadSignedPdf, sendSigningLinkWhatsApp, loading: actionLoading } = useDocSignatures();
 
   useEffect(() => { loadDocuments(); }, []);
 
