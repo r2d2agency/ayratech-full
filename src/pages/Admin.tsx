@@ -440,6 +440,7 @@ export default function Admin() {
       has_projects: newPlanProjects,
       has_lead_gleego: newPlanLeadGleego,
       has_doc_signatures: newPlanDocSignatures,
+      doc_signatures_limit: parseInt(newPlanDocSignaturesLimit) || 0,
       price: parseFloat(newPlanPrice) || 0,
       billing_period: newPlanPeriod,
       visible_on_signup: newPlanVisibleOnSignup,
