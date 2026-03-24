@@ -380,10 +380,11 @@ async function generateSignedPdf(documentId) {
   };
 
   const formatSignedAt = (signedAt) => {
-    if (!signedAt) return new Date().toLocaleString('pt-BR');
+    const tzOptions = { timeZone: 'America/Sao_Paulo' };
+    if (!signedAt) return new Date().toLocaleString('pt-BR', tzOptions);
     const date = new Date(signedAt);
-    if (Number.isNaN(date.getTime())) return new Date().toLocaleString('pt-BR');
-    return date.toLocaleString('pt-BR');
+    if (Number.isNaN(date.getTime())) return new Date().toLocaleString('pt-BR', tzOptions);
+    return date.toLocaleString('pt-BR', tzOptions);
   };
 
   // 6. For each signed signer, embed their signature at configured positions
