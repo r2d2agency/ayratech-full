@@ -2,6 +2,7 @@ import { Router } from 'express';
 import crypto from 'crypto';
 import nodemailer from 'nodemailer';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
 import { query } from '../db.js';
