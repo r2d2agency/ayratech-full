@@ -193,6 +193,12 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
       
       // Load scheduled WhatsApp messages for this deal's contacts
       loadScheduledMessages();
+
+      // Load deal documents
+      if (docSignaturesEnabled && deal?.id) {
+        setLoadingDocuments(true);
+        listDocumentsByDeal(deal.id).then(setDealDocuments).finally(() => setLoadingDocuments(false));
+      }
     }
   }, [open, currentDeal?.contacts]);
 
