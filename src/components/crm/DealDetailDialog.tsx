@@ -123,6 +123,9 @@ export function DealDetailDialog({ deal, open, onOpenChange }: DealDetailDialogP
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [newProjectDescription, setNewProjectDescription] = useState("");
   const [newProjectTemplateId, setNewProjectTemplateId] = useState<string>("");
+  const [showSignatureDialog, setShowSignatureDialog] = useState(false);
+  const [dealDocuments, setDealDocuments] = useState<DocSignatureDocument[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
 
   const { data: fullDeal, isLoading } = useCRMDeal(deal?.id || null);
   const { data: funnelData } = useCRMFunnel(deal?.funnel_id || null);
