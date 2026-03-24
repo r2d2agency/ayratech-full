@@ -1022,7 +1022,7 @@ router.get('/sign/:token/download', async (req, res) => {
     let downloadUrl = signer.signed_file_url;
     if (!downloadUrl) {
       try {
-        downloadUrl = await generateSignedPdf(signer.doc_id);
+        downloadUrl = await generateSignedPdf(signer.doc_id, getFrontendBaseUrl(req));
       } catch (generationError) {
         console.error('[doc-signatures] Public download generation error:', generationError.message);
       }
