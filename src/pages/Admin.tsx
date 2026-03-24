@@ -1274,7 +1274,9 @@ export default function Admin() {
                           <Badge variant="secondary" className="text-xs">Lead Gleego</Badge>
                         )}
                         {plan.has_doc_signatures && (
-                          <Badge variant="secondary" className="text-xs">Assinaturas</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            Assinaturas {plan.doc_signatures_limit > 0 ? `(${plan.doc_signatures_limit}/mês)` : '(∞)'}
+                          </Badge>
                         )}
                       </div>
                       <div className="flex items-center justify-between pt-2 border-t">
