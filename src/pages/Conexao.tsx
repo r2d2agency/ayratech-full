@@ -31,6 +31,7 @@ interface Connection {
   show_groups?: boolean;
   meta_phone_number_id?: string;
   meta_waba_id?: string;
+  meta_webhook_verify_token?: string;
   created_at: string;
 }
 
