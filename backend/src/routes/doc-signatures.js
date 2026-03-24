@@ -1333,4 +1333,111 @@ router.get('/:id/download', async (req, res) => {
   }
 });
 
+// List documents by deal_id (for CRM integration)
+router.get('/by-deal/:dealId', async (req, res) => {
+  try {
+    const orgId = await getUserOrgId(req.userId);
+    if (!orgId) return res.status(403).json({ error: 'Sem organização' });
+
+    const result = await query(
+      `SELECT d.*, u.name as creator_name,
+              (SELECT COUNT(*) FROM doc_signature_signers WHERE document_id = d.id) as signers_count,
+              (SELECT COUNT(*) FROM doc_signature_signers WHERE document_id = d.id AND status = 'signed') as signed_count
+       FROM doc_signature_documents d
+       LEFT JOIN users u ON u.id = d.created_by
+       WHERE d.organization_id = $1 AND d.deal_id = $2
+       ORDER BY d.created_at DESC`,
+      [orgId, req.params.dealId]
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('[doc-signatures] List by deal error:', error);
+    res.status(500).json({ error: 'Erro ao listar documentos' });
+  }
+});
+
+// Send signing link via WhatsApp
+router.post('/:id/send-whatsapp', async (req, res) => {
+  try {
+    const orgId = await getUserOrgId(req.userId);
+    if (!orgId) return res.status(403).json({ error: 'Sem organização' });
+
+    const docResult = await query(
+      `SELECT d.title FROM doc_signature_documents d WHERE d.id = $1 AND d.organization_id = $2`,
+      [req.params.id, orgId]
+    );
+    if (docResult.rows.length === 0) return res.status(404).json({ error: 'Documento não encontrado' });
+    const docTitle = docResult.rows[0].title;
+
+    // Get signers with phone numbers
+    const signersResult = await query(
+      `SELECT id, name, phone, sign_token, status FROM doc_signature_signers WHERE document_id = $1 AND phone IS NOT NULL AND status = 'pending'`,
+      [req.params.id]
+    );
+
+    if (signersResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Nenhum signatário com telefone e pendente encontrado' });
+    }
+
+    // Get first active WhatsApp connection
+    const connResult = await query(
+      `SELECT c.id, c.api_url, c.api_key, c.instance_name, c.provider 
+       FROM connections c 
+       WHERE c.organization_id = $1 AND c.status IN ('connected', 'open', 'online')
+       ORDER BY c.created_at ASC LIMIT 1`,
+      [orgId]
+    );
+
+    if (connResult.rows.length === 0) {
+      return res.status(400).json({ error: 'Nenhuma conexão WhatsApp ativa' });
+    }
+
+    const connection = connResult.rows[0];
+    const { sendMessage } = await import('../lib/whatsapp-provider.js');
+
+    const frontendUrl = getFrontendBaseUrl({ headers: req.headers, protocol: req.protocol });
+    let sent = 0;
+
+    for (const signer of signersResult.rows) {
+      const signingLink = `${frontendUrl}/assinar/${signer.sign_token}`;
+      const message = `📝 *Solicitação de Assinatura*\n\nOlá ${signer.name},\n\nVocê tem um documento aguardando sua assinatura:\n\n📄 *${docTitle}*\n\n🔗 Acesse o link abaixo para assinar:\n${signingLink}\n\n_Assinatura eletrônica com validade jurídica conforme MP 2.200-2/2001._`;
+
+      try {
+        await sendMessage(connection, signer.phone, message, 'text');
+        sent++;
+
+        // Save message in conversation if exists
+        const phone = signer.phone.replace(/\D/g, '');
+        const jid = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
+        const convResult = await query(
+          `SELECT id FROM conversations WHERE connection_id = $1 AND contact_jid = $2 LIMIT 1`,
+          [connection.id, jid]
+        );
+        if (convResult.rows.length > 0) {
+          await query(
+            `INSERT INTO messages (conversation_id, content, message_type, from_me, status) VALUES ($1, $2, 'text', true, 'sent')`,
+            [convResult.rows[0].id, message]
+          );
+          await query(`UPDATE conversations SET last_message_at = NOW() WHERE id = $1`, [convResult.rows[0].id]);
+        }
+      } catch (sendErr) {
+        console.error(`[doc-signatures] WhatsApp send error for ${signer.name}:`, sendErr.message);
+      }
+    }
+
+    const userResult = await query(`SELECT name, email FROM users WHERE id = $1`, [req.userId]);
+    await auditLog(req.params.id, 'whatsapp_links_sent', {
+      name: userResult.rows[0]?.name, email: userResult.rows[0]?.email,
+      ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent'],
+      details: { sent_count: sent, total_signers: signersResult.rows.length }
+    });
+
+    res.json({ success: true, sent });
+  } catch (error) {
+    console.error('[doc-signatures] Send WhatsApp error:', error);
+    res.status(500).json({ error: 'Erro ao enviar links via WhatsApp' });
+  }
+});
+
 export default router;
