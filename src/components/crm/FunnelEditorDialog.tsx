@@ -269,6 +269,33 @@ export function FunnelEditorDialog({ funnel, open, onOpenChange }: FunnelEditorD
               />
             </div>
 
+            {/* Connection for automations */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Plug className="h-4 w-4" />
+                Conexão para automações
+              </Label>
+              <Select
+                value={connectionId || "none"}
+                onValueChange={(v) => setConnectionId(v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma conexão" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Automática (primeira disponível)</SelectItem>
+                  {connections.filter(c => c.status === 'connected').map(conn => (
+                    <SelectItem key={conn.id} value={conn.id}>
+                      {conn.name} {conn.phone_number ? `(${conn.phone_number})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Conexão WhatsApp usada para disparar fluxos automáticos neste funil
+              </p>
+            </div>
+
             {/* Stages */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
