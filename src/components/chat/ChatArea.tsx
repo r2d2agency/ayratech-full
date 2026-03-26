@@ -517,12 +517,14 @@ export function ChatArea({
   }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const inferredType = inferMessageTypeFromFile(file);
-    let preview: string | undefined;
-    if (inferredType === 'image') preview = URL.createObjectURL(file);
-    setPendingFile({ file, preview });
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map(file => {
+      const inferredType = inferMessageTypeFromFile(file);
+      const preview = inferredType === 'image' ? URL.createObjectURL(file) : undefined;
+      return { file, preview };
+    });
+    setPendingFiles(prev => [...prev, ...newFiles]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
