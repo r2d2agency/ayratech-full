@@ -77,6 +77,11 @@ const fileFilter = (req, file, cb) => {
     'image/png',
     'image/gif',
     'image/webp',
+    'image/bmp',
+    'image/tiff',
+    'image/svg+xml',
+    'image/avif',
+    'image/jfif',
     // Audio
     'audio/mpeg',
     'audio/mp3',
