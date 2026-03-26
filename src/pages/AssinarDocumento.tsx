@@ -178,7 +178,42 @@ export default function AssinarDocumento() {
     setSignaturePreviewTimestamp(null);
   };
 
+  const handleCnhUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast.error('Envie uma imagem da CNH'); return; }
+    if (file.size > 10 * 1024 * 1024) { toast.error('Imagem muito grande (máximo 10MB)'); return; }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCnhImage(reader.result as string);
+      setCnhResult(null);
+    };
+    reader.readAsDataURL(file);
+    if (cnhInputRef.current) cnhInputRef.current.value = '';
+  };
+
+  const handleValidateCnh = async () => {
+    if (!cnhImage || !token) return;
+    setCnhValidating(true);
+    try {
+      const result = await validateCnh(token, cnhImage);
+      setCnhResult(result);
+      if (result?.validated) {
+        setCnhValidated(true);
+        toast.success('✅ CNH validada com sucesso! Identidade confirmada.');
+      } else {
+        toast.error(result?.motivo || 'Dados da CNH não conferem com o signatário.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao validar CNH');
+    } finally {
+      setCnhValidating(false);
+    }
+  };
+
   const handleSubmit = async () => {
+    if (requireCnhValidation && !cnhValidated) { toast.error('A validação da CNH é obrigatória para assinar este documento.'); return; }
     if (!geolocation) { toast.error('A geolocalização é obrigatória para assinar. Permita o acesso à localização no navegador e tente novamente.'); return; }
     if (!sigPadRef.current || sigPadRef.current.isEmpty()) { toast.error('Desenhe sua assinatura'); return; }
     if (!cpfInput || cpfInput.replace(/\D/g, '').length !== 11) { toast.error('CPF inválido'); return; }
