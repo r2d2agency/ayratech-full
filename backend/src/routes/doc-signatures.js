@@ -916,8 +916,8 @@ router.get('/sign/:token', async (req, res) => {
       positions: posResult.rows,
     });
 
-    // Audit: document accessed
-    await auditLog(signer.document_id, 'document_accessed', {
+    // Audit: signing link opened
+    await auditLog(signer.document_id, 'signing_link_opened', {
       name: signer.name, email: signer.email,
       ip: getClientIp(req), userAgent: req.headers['user-agent'],
       details: { access_type: 'public_signing' }
