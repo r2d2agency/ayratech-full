@@ -584,28 +584,43 @@ export function ChatArea({
   };
 
   const handleConfirmFileUpload = async () => {
-    if (!pendingFile) return;
-    const { file, preview } = pendingFile;
-    try {
-      const url = await uploadFile(file);
-      if (url) {
-        const type = inferMessageTypeFromFile(file);
-        const content = type === 'document' ? file.name : '';
-        await onSendMessage(content, type, url, undefined, file.type);
-        toast.success("Arquivo enviado!");
-      } else { toast.error("Falha no upload - tente novamente"); }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro ao enviar: ${errorMessage}`);
-    } finally {
-      if (preview) URL.revokeObjectURL(preview);
-      setPendingFile(null); resetProgress();
+    if (pendingFiles.length === 0) return;
+    const filesToSend = [...pendingFiles];
+    setPendingFiles([]);
+    let successCount = 0;
+    for (const { file, preview } of filesToSend) {
+      try {
+        const url = await uploadFile(file);
+        if (url) {
+          const type = inferMessageTypeFromFile(file);
+          const content = type === 'document' ? file.name : '';
+          await onSendMessage(content, type, url, undefined, file.type);
+          successCount++;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        toast.error(`Erro ao enviar ${file.name}: ${errorMessage}`);
+      } finally {
+        if (preview) URL.revokeObjectURL(preview);
+      }
     }
+    if (successCount > 0) {
+      toast.success(successCount === 1 ? "Arquivo enviado!" : `${successCount} arquivos enviados!`);
+    }
+    resetProgress();
   };
 
   const handleCancelFileUpload = () => {
-    if (pendingFile?.preview) URL.revokeObjectURL(pendingFile.preview);
-    setPendingFile(null); resetProgress();
+    pendingFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
+    setPendingFiles([]); resetProgress();
+  };
+
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => {
+      const removed = prev[index];
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const getFileIcon = (mimeType: string) => {
