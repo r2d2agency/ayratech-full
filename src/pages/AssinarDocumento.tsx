@@ -223,9 +223,15 @@ export default function AssinarDocumento() {
   const handleSubmit = async () => {
     if (requireCnhValidation && !cnhValidated) { toast.error('A validação da CNH é obrigatória para assinar este documento.'); return; }
     if (!geolocation) { toast.error('A geolocalização é obrigatória para assinar. Permita o acesso à localização no navegador e tente novamente.'); return; }
+    if (!termsAccepted) { toast.error('Você precisa aceitar os termos do documento para assinar.'); return; }
     if (!sigPadRef.current || sigPadRef.current.isEmpty()) { toast.error('Desenhe sua assinatura'); return; }
     if (!cpfInput || cpfInput.replace(/\D/g, '').length !== 11) { toast.error('CPF inválido'); return; }
     if (!fullName) { toast.error('Nome completo é obrigatório'); return; }
+
+    // Calculate viewing duration
+    const viewingDurationSeconds = viewStartTimeRef.current
+      ? Math.round((Date.now() - viewStartTimeRef.current) / 1000)
+      : null;
 
     try {
       const signatureImage = sigPadRef.current.toDataURL('image/png');
@@ -234,6 +240,8 @@ export default function AssinarDocumento() {
         cpf: cpfInput,
         full_name: fullName,
         geolocation: geolocation || undefined,
+        viewing_duration_seconds: viewingDurationSeconds,
+        terms_accepted_at: termsAcceptedAt,
       });
 
       const fallbackDownloadUrl = (!result?.download_url && !result?.signed_pdf_url)
