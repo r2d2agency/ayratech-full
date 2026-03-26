@@ -899,6 +899,7 @@ router.get('/sign/:token', async (req, res) => {
     const signerFileUrl = toAbsoluteFileUrl(req, normalizedSignerFileUrl) || normalizedSignerFileUrl;
 
     res.json({
+      document_id: signer.document_id,
       document_title: signer.title,
       document_description: signer.description || null,
       file_url: signerFileUrl,
