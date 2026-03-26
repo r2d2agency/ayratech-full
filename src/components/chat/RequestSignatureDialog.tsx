@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { FileUploadInput } from '@/components/ui/file-upload-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useDocSignatures } from '@/hooks/use-doc-signatures';
 import { toast } from 'sonner';
-import { FileSignature, Loader2, Send } from 'lucide-react';
+import { FileSignature, Loader2, Send, CreditCard } from 'lucide-react';
 
 interface RequestSignatureDialogProps {
   open: boolean;
