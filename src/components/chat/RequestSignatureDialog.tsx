@@ -130,7 +130,16 @@ export function RequestSignatureDialog({ open, onOpenChange, contactName, contac
             <Label>Arquivo PDF *</Label>
             <FileUploadInput accept="application/pdf" onChange={(url) => setFileUrl(url)} value={fileUrl} previewType="file" />
           </div>
-
+          <div className="flex items-center justify-between p-3 rounded-lg border">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <div>
+                <p className="text-sm font-medium">Validação de CNH</p>
+                <p className="text-xs text-muted-foreground">Exigir foto da habilitação via IA</p>
+              </div>
+            </div>
+            <Switch checked={requireCnh} onCheckedChange={setRequireCnh} />
+          </div>
           {/* Signer info */}
           <div className="border-t pt-4">
             <h4 className="font-medium text-sm mb-3">Dados do Signatário</h4>
