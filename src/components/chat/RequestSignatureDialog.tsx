@@ -50,6 +50,7 @@ export function RequestSignatureDialog({ open, onOpenChange, contactName, contac
     setSignerEmail('');
     setSignerCpf('');
     setSignerRole('signer');
+    setRequireCnh(false);
   };
 
   const handleSubmit = async () => {
