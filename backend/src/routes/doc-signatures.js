@@ -924,8 +924,116 @@ router.get('/sign/:token', async (req, res) => {
     res.status(500).json({ error: 'Erro interno' });
   }
 });
+// Validate CNH image via AI (public)
+router.post('/sign/:token/validate-cnh', async (req, res) => {
+  try {
+    const { token } = req.params;
+    const { cnh_image } = req.body; // base64 image
+    if (!cnh_image) return res.status(400).json({ error: 'Imagem da CNH é obrigatória' });
 
-// Submit signature (public)
+    const signerResult = await query(
+      `SELECT s.*, d.require_cnh_validation, d.organization_id, d.id as doc_id
+       FROM doc_signature_signers s
+       JOIN doc_signature_documents d ON d.id = s.document_id
+       WHERE s.sign_token = $1`,
+      [token]
+    );
+    if (signerResult.rows.length === 0) return res.status(404).json({ error: 'Link inválido' });
+
+    const signer = signerResult.rows[0];
+    if (!signer.require_cnh_validation) return res.status(400).json({ error: 'Validação de CNH não é necessária para este documento' });
+
+    // Get org AI config
+    const aiConfigResult = await query(
+      `SELECT ai_provider, ai_model, ai_api_key FROM organizations WHERE id = $1`,
+      [signer.organization_id]
+    );
+    const aiConfig = aiConfigResult.rows[0];
+    if (!aiConfig?.ai_api_key || aiConfig.ai_provider === 'none') {
+      return res.status(400).json({ error: 'Configuração de IA não encontrada na organização. Configure um provedor de IA nas configurações.' });
+    }
+
+    const { callAI } = await import('../lib/ai-caller.js');
+
+    const config = {
+      provider: aiConfig.ai_provider,
+      model: aiConfig.ai_model,
+      apiKey: aiConfig.ai_api_key,
+    };
+
+    const signerCleanCpf = signer.cpf.replace(/\D/g, '');
+    const signerName = signer.name.trim().toLowerCase();
+
+    const messages = [
+      {
+        role: 'system',
+        content: `Você é um validador de documentos. Analise a imagem da CNH (Carteira Nacional de Habilitação) brasileira e extraia EXATAMENTE o nome completo e o CPF visíveis no documento. Responda SOMENTE em JSON com o formato: {"nome_cnh": "NOME COMPLETO", "cpf_cnh": "00000000000", "documento_valido": true/false, "motivo": "explicação"}. Se não conseguir ler claramente, defina documento_valido como false.`
+      },
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Analise esta imagem de CNH. Extraia o nome completo e CPF do documento. O nome esperado é "${signer.name}" e o CPF esperado é "${signerCleanCpf}". Verifique se os dados batem.`
+          },
+          {
+            type: 'image_url',
+            image_url: { url: cnh_image }
+          }
+        ]
+      }
+    ];
+
+    const aiResult = await callAI(config, messages, {
+      temperature: 0.1,
+      maxTokens: 500,
+      responseFormat: { type: 'json_object' },
+    });
+
+    let parsed;
+    try {
+      parsed = JSON.parse(aiResult.content);
+    } catch {
+      return res.status(400).json({ error: 'Não foi possível analisar a CNH. Tente novamente com uma foto mais nítida.', ai_raw: aiResult.content });
+    }
+
+    const cnhName = (parsed.nome_cnh || '').trim().toLowerCase();
+    const cnhCpf = (parsed.cpf_cnh || '').replace(/\D/g, '');
+
+    // Check name similarity (allow partial match)
+    const nameWords = signerName.split(/\s+/);
+    const cnhWords = cnhName.split(/\s+/);
+    const matchingWords = nameWords.filter(w => cnhWords.some(cw => cw === w || cw.includes(w) || w.includes(cw)));
+    const nameMatch = matchingWords.length >= Math.min(2, nameWords.length);
+
+    const cpfMatch = cnhCpf === signerCleanCpf;
+    const validated = parsed.documento_valido !== false && nameMatch && cpfMatch;
+
+    if (validated) {
+      // Mark signer as CNH validated
+      await query(`UPDATE doc_signature_signers SET cnh_validated = true, cnh_image_url = $1 WHERE id = $2`, [cnh_image.substring(0, 100) + '...stored', signer.id]);
+
+      await auditLog(signer.doc_id, 'cnh_validated', {
+        name: signer.name, email: signer.email,
+        ip: getClientIp(req), userAgent: req.headers['user-agent'],
+        details: { nome_cnh: parsed.nome_cnh, cpf_match: cpfMatch, name_match: nameMatch }
+      });
+    }
+
+    res.json({
+      validated,
+      nome_cnh: parsed.nome_cnh,
+      cpf_match: cpfMatch,
+      name_match: nameMatch,
+      motivo: parsed.motivo || (validated ? 'Dados conferem' : 'Dados não conferem com o signatário cadastrado'),
+    });
+  } catch (error) {
+    console.error('[doc-signatures] CNH validation error:', error);
+    res.status(500).json({ error: 'Erro ao validar CNH' });
+  }
+});
+
+
 router.post('/sign/:token', async (req, res) => {
   try {
     const { token } = req.params;
