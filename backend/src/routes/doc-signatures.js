@@ -645,6 +645,9 @@ async function generateSignedPdf(documentId, baseUrl) {
   // 8. Save the modified PDF
   const signedPdfBytes = await pdfDoc.save();
 
+  // Compute SHA-256 hash of the signed PDF
+  const signedHash = crypto.createHash('sha256').update(Buffer.from(signedPdfBytes)).digest('hex');
+
   // Save to uploads directory
   const uploadsDir = path.resolve('uploads', 'signed-docs');
   if (!fs.existsSync(uploadsDir)) {
@@ -658,10 +661,10 @@ async function generateSignedPdf(documentId, baseUrl) {
   // Build the URL (relative to server)
   const signedFileUrl = `/uploads/signed-docs/${signedFileName}`;
 
-  // 8. Update the document record
+  // 8. Update the document record with signed URL and hash
   await query(
-    `UPDATE doc_signature_documents SET signed_file_url = $1, updated_at = NOW() WHERE id = $2`,
-    [signedFileUrl, documentId]
+    `UPDATE doc_signature_documents SET signed_file_url = $1, hash_sha256 = $2, updated_at = NOW() WHERE id = $3`,
+    [signedFileUrl, signedHash, documentId]
   );
 
   console.log(`[doc-signatures] Generated signed PDF: ${signedFileUrl} for document ${documentId}`);
