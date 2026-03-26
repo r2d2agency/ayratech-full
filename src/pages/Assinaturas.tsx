@@ -45,6 +45,7 @@ export default function Assinaturas() {
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newFileUrl, setNewFileUrl] = useState('');
+  const [newRequireCnh, setNewRequireCnh] = useState(false);
 
   // Add signer form
   const [signerName, setSignerName] = useState('');
