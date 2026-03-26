@@ -5,13 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp';
 import { PdfSignaturePositioner } from '@/components/doc-signatures/PdfSignaturePositioner';
 import { useDocSignatures, DocSigner, SignaturePosition } from '@/hooks/use-doc-signatures';
 import { resolveMediaUrl } from '@/lib/media';
 import { useParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { FileSignature, Loader2, CheckCircle2, RefreshCw, MapPin, Download, ShieldCheck, Mail, KeyRound, CreditCard, Camera, Upload, X } from 'lucide-react';
+import { FileSignature, Loader2, CheckCircle2, RefreshCw, MapPin, Download, ShieldCheck, Mail, KeyRound, CreditCard, Camera, Upload, X, ExternalLink } from 'lucide-react';
 
 export default function AssinarDocumento() {
   const { token } = useParams<{ token: string }>();
