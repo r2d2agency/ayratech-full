@@ -540,10 +540,14 @@ export function ChatArea({
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }, []);
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); dragCounterRef.current = 0; setIsDragOver(false);
-    const file = e.dataTransfer.files?.[0]; if (!file) return;
-    const inferredType = inferMessageTypeFromFile(file);
-    let preview: string | undefined; if (inferredType === 'image') preview = URL.createObjectURL(file);
-    setPendingFile({ file, preview });
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map(file => {
+      const inferredType = inferMessageTypeFromFile(file);
+      const preview = inferredType === 'image' ? URL.createObjectURL(file) : undefined;
+      return { file, preview };
+    });
+    setPendingFiles(prev => [...prev, ...newFiles]);
   }, [inferMessageTypeFromFile]);
 
   // Paste image from clipboard (Ctrl+V / Cmd+V)
