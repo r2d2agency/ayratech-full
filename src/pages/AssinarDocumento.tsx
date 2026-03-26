@@ -520,7 +520,86 @@ export default function AssinarDocumento() {
           </Card>
         )}
 
-        <Card>
+        {/* CNH Validation Card */}
+        {requireCnhValidation && (
+          <Card className={cnhValidated ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 'border-amber-500 bg-amber-50 dark:bg-amber-950/20'}>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Validação de Identidade via CNH
+                {cnhValidated && <Badge variant="default" className="gap-1 text-xs"><CheckCircle2 className="h-3 w-3" /> Validada</Badge>}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!cnhValidated ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    O remetente deste documento solicita que você envie uma foto da sua <strong>CNH (Carteira Nacional de Habilitação)</strong> para validar sua identidade. A IA irá conferir se o nome e CPF da CNH conferem com seus dados cadastrados.
+                  </p>
+
+                  <input
+                    ref={cnhInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    className="hidden"
+                    onChange={handleCnhUpload}
+                  />
+
+                  {cnhImage ? (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <img src={cnhImage} alt="CNH" className="w-full max-h-64 object-contain rounded-lg border" />
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-2 right-2 h-7 w-7"
+                          onClick={() => { setCnhImage(null); setCnhResult(null); }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {cnhResult && !cnhResult.validated && (
+                        <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+                          <p className="text-sm text-destructive font-medium">❌ {cnhResult.motivo || 'Dados não conferem'}</p>
+                          {cnhResult.nome_cnh && (
+                            <p className="text-xs text-muted-foreground mt-1">Nome encontrado na CNH: {cnhResult.nome_cnh}</p>
+                          )}
+                        </div>
+                      )}
+
+                      <Button onClick={handleValidateCnh} disabled={cnhValidating} className="w-full gap-2">
+                        {cnhValidating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                        {cnhValidating ? 'Analisando CNH com IA...' : 'Validar CNH'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Button variant="outline" onClick={() => cnhInputRef.current?.click()} className="flex-1 gap-2">
+                        <Camera className="h-4 w-4" />
+                        Tirar Foto
+                      </Button>
+                      <Button variant="outline" onClick={() => { if (cnhInputRef.current) { cnhInputRef.current.removeAttribute('capture'); cnhInputRef.current.click(); setTimeout(() => cnhInputRef.current?.setAttribute('capture', 'environment'), 100); } }} className="flex-1 gap-2">
+                        <Upload className="h-4 w-4" />
+                        Enviar Arquivo
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-8 w-8 text-green-500" />
+                  <div>
+                    <p className="font-medium text-green-700 dark:text-green-400">Identidade validada com sucesso!</p>
+                    <p className="text-xs text-muted-foreground">O nome e CPF da sua CNH conferem com os dados do signatário.</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
           <CardHeader>
             <CardTitle className="text-base">Dados do Signatário</CardTitle>
           </CardHeader>
