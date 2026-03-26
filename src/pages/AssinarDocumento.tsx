@@ -600,6 +600,7 @@ export default function AssinarDocumento() {
           </Card>
         )}
 
+        <Card>
           <CardHeader>
             <CardTitle className="text-base">Dados do Signatário</CardTitle>
           </CardHeader>
