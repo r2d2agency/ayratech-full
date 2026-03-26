@@ -560,7 +560,7 @@ export function ChatArea({
         const file = items[i].getAsFile();
         if (!file) return;
         const preview = URL.createObjectURL(file);
-        setPendingFile({ file, preview });
+        setPendingFiles(prev => [...prev, { file, preview }]);
         return;
       }
     }
