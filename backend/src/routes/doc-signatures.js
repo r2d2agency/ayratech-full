@@ -1342,13 +1342,30 @@ router.post('/', async (req, res) => {
 
     const normalizedFileUrl = normalizeDocumentFileUrl(file_url);
 
+    // Compute SHA-256 hash of the original PDF
+    let hashSha256 = null;
+    try {
+      const localPath = resolveLocalUploadsPath(normalizedFileUrl);
+      let pdfBuffer;
+      if (localPath) {
+        pdfBuffer = fs.readFileSync(localPath);
+      } else if (HTTP_URL_REGEX.test(normalizedFileUrl)) {
+        pdfBuffer = await readRemoteBinary(normalizedFileUrl);
+      }
+      if (pdfBuffer) {
+        hashSha256 = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+      }
+    } catch (hashErr) {
+      console.error('[doc-signatures] Hash computation error:', hashErr.message);
+    }
+
     const userResult = await query(`SELECT name, email FROM users WHERE id = $1`, [req.userId]);
     const user = userResult.rows[0];
 
     const result = await query(
-      `INSERT INTO doc_signature_documents (organization_id, title, description, file_url, created_by, deal_id, require_cnh_validation)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [orgId, title, description || null, normalizedFileUrl, req.userId, deal_id || null, require_cnh_validation || false]
+      `INSERT INTO doc_signature_documents (organization_id, title, description, file_url, created_by, deal_id, require_cnh_validation, hash_sha256)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [orgId, title, description || null, normalizedFileUrl, req.userId, deal_id || null, require_cnh_validation || false, hashSha256]
     );
 
     const doc = result.rows[0];
