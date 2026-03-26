@@ -140,8 +140,9 @@ export default function AssinarDocumento() {
       if (data.org_name) setOrgName(data.org_name);
       if (data.org_logo_url) setOrgLogoUrl(data.org_logo_url);
       if (data.document_description) setDocDescription(data.document_description);
+      if (data.require_cnh_validation) setRequireCnhValidation(true);
+      if (data.cnh_validated) setCnhValidated(true);
     } catch (err: any) {
-      // If require_otp, go back to OTP flow
       if (err.require_otp) {
         setOtpStep('idle');
         handleRequestOtp();
