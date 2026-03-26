@@ -225,7 +225,7 @@ export function ChatArea({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const { uploadFile, isUploading, progress: uploadProgress, resetProgress } = useUpload();
-  const [pendingFile, setPendingFile] = useState<{ file: File; preview?: string } | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<Array<{ file: File; preview?: string }>>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const dragCounterRef = useRef(0);
   const { user, modulesEnabled } = useAuth();
@@ -517,12 +517,14 @@ export function ChatArea({
   }, []);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const inferredType = inferMessageTypeFromFile(file);
-    let preview: string | undefined;
-    if (inferredType === 'image') preview = URL.createObjectURL(file);
-    setPendingFile({ file, preview });
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map(file => {
+      const inferredType = inferMessageTypeFromFile(file);
+      const preview = inferredType === 'image' ? URL.createObjectURL(file) : undefined;
+      return { file, preview };
+    });
+    setPendingFiles(prev => [...prev, ...newFiles]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -538,10 +540,14 @@ export function ChatArea({
   const handleDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); }, []);
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); dragCounterRef.current = 0; setIsDragOver(false);
-    const file = e.dataTransfer.files?.[0]; if (!file) return;
-    const inferredType = inferMessageTypeFromFile(file);
-    let preview: string | undefined; if (inferredType === 'image') preview = URL.createObjectURL(file);
-    setPendingFile({ file, preview });
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map(file => {
+      const inferredType = inferMessageTypeFromFile(file);
+      const preview = inferredType === 'image' ? URL.createObjectURL(file) : undefined;
+      return { file, preview };
+    });
+    setPendingFiles(prev => [...prev, ...newFiles]);
   }, [inferMessageTypeFromFile]);
 
   // Paste image from clipboard (Ctrl+V / Cmd+V)
@@ -554,7 +560,7 @@ export function ChatArea({
         const file = items[i].getAsFile();
         if (!file) return;
         const preview = URL.createObjectURL(file);
-        setPendingFile({ file, preview });
+        setPendingFiles(prev => [...prev, { file, preview }]);
         return;
       }
     }
@@ -578,28 +584,43 @@ export function ChatArea({
   };
 
   const handleConfirmFileUpload = async () => {
-    if (!pendingFile) return;
-    const { file, preview } = pendingFile;
-    try {
-      const url = await uploadFile(file);
-      if (url) {
-        const type = inferMessageTypeFromFile(file);
-        const content = type === 'document' ? file.name : '';
-        await onSendMessage(content, type, url, undefined, file.type);
-        toast.success("Arquivo enviado!");
-      } else { toast.error("Falha no upload - tente novamente"); }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      toast.error(`Erro ao enviar: ${errorMessage}`);
-    } finally {
-      if (preview) URL.revokeObjectURL(preview);
-      setPendingFile(null); resetProgress();
+    if (pendingFiles.length === 0) return;
+    const filesToSend = [...pendingFiles];
+    setPendingFiles([]);
+    let successCount = 0;
+    for (const { file, preview } of filesToSend) {
+      try {
+        const url = await uploadFile(file);
+        if (url) {
+          const type = inferMessageTypeFromFile(file);
+          const content = type === 'document' ? file.name : '';
+          await onSendMessage(content, type, url, undefined, file.type);
+          successCount++;
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+        toast.error(`Erro ao enviar ${file.name}: ${errorMessage}`);
+      } finally {
+        if (preview) URL.revokeObjectURL(preview);
+      }
     }
+    if (successCount > 0) {
+      toast.success(successCount === 1 ? "Arquivo enviado!" : `${successCount} arquivos enviados!`);
+    }
+    resetProgress();
   };
 
   const handleCancelFileUpload = () => {
-    if (pendingFile?.preview) URL.revokeObjectURL(pendingFile.preview);
-    setPendingFile(null); resetProgress();
+    pendingFiles.forEach(f => { if (f.preview) URL.revokeObjectURL(f.preview); });
+    setPendingFiles([]); resetProgress();
+  };
+
+  const handleRemovePendingFile = (index: number) => {
+    setPendingFiles(prev => {
+      const removed = prev[index];
+      if (removed?.preview) URL.revokeObjectURL(removed.preview);
+      return prev.filter((_, i) => i !== index);
+    });
   };
 
   const getFileIcon = (mimeType: string) => {
@@ -1160,30 +1181,45 @@ export function ChatArea({
           </div>
         )}
         
-        <input ref={fileInputRef} type="file" className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" onChange={handleFileSelect} />
+        <input ref={fileInputRef} type="file" multiple className="hidden" accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar" onChange={handleFileSelect} />
 
-        {pendingFile && (
-          <div className="mb-3 p-3 rounded-lg border bg-muted/50 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0">
-                {pendingFile.preview ? (
-                  <div className="w-16 h-16 rounded-lg overflow-hidden bg-muted"><img src={pendingFile.preview} alt="Preview" className="w-full h-full object-cover" /></div>
-                ) : (
-                  <div className="w-16 h-16 rounded-lg bg-muted flex items-center justify-center">{getFileIcon(pendingFile.file.type)}</div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{pendingFile.file.name}</p>
-                <p className="text-xs text-muted-foreground">{formatFileSize(pendingFile.file.size)}</p>
-                {isUploading && <div className="mt-2 space-y-1"><Progress value={uploadProgress} className="h-2" /><p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p></div>}
-              </div>
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleCancelFileUpload} disabled={isUploading}><X className="h-4 w-4" /></Button>
-                <Button size="icon" className="h-8 w-8" onClick={handleConfirmFileUpload} disabled={isUploading || sending}>
-                  {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+        {pendingFiles.length > 0 && (
+          <div className="mb-3 p-3 rounded-lg border bg-muted/50 animate-in fade-in slide-in-from-bottom-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium text-muted-foreground">
+                {pendingFiles.length} arquivo{pendingFiles.length > 1 ? 's' : ''} selecionado{pendingFiles.length > 1 ? 's' : ''}
+              </p>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive hover:text-destructive" onClick={handleCancelFileUpload} disabled={isUploading}>
+                  Cancelar tudo
+                </Button>
+                <Button size="sm" className="h-7 text-xs" onClick={handleConfirmFileUpload} disabled={isUploading || sending}>
+                  {isUploading ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <Send className="h-3 w-3 mr-1" />}
+                  Enviar {pendingFiles.length > 1 ? `(${pendingFiles.length})` : ''}
                 </Button>
               </div>
             </div>
+            <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+              {pendingFiles.map((pf, idx) => (
+                <div key={idx} className="relative group flex items-center gap-2 p-2 rounded-md border bg-background min-w-0 max-w-[200px]">
+                  <div className="flex-shrink-0">
+                    {pf.preview ? (
+                      <div className="w-10 h-10 rounded overflow-hidden bg-muted"><img src={pf.preview} alt="Preview" className="w-full h-full object-cover" /></div>
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">{getFileIcon(pf.file.type)}</div>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium truncate">{pf.file.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatFileSize(pf.file.size)}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity absolute -top-1 -right-1 bg-background border shadow-sm" onClick={() => handleRemovePendingFile(idx)} disabled={isUploading}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {isUploading && <div className="space-y-1"><Progress value={uploadProgress} className="h-2" /><p className="text-xs text-muted-foreground text-right">{uploadProgress}%</p></div>}
           </div>
         )}
 
