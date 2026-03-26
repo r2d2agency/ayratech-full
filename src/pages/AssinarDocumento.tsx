@@ -39,8 +39,16 @@ export default function AssinarDocumento() {
   const [signaturePreviewUrl, setSignaturePreviewUrl] = useState<string | null>(null);
   const [signaturePreviewTimestamp, setSignaturePreviewTimestamp] = useState<string | null>(null);
 
+  // CNH validation state
+  const [requireCnhValidation, setRequireCnhValidation] = useState(false);
+  const [cnhValidated, setCnhValidated] = useState(false);
+  const [cnhImage, setCnhImage] = useState<string | null>(null);
+  const [cnhValidating, setCnhValidating] = useState(false);
+  const [cnhResult, setCnhResult] = useState<{ validated: boolean; motivo?: string; nome_cnh?: string } | null>(null);
+  const cnhInputRef = useRef<HTMLInputElement>(null);
+
   const sigPadRef = useRef<SignatureCanvas>(null);
-  const { getPublicSigningData, submitSignature, getPublicSignedPdfUrl, requestOtp, verifyOtp, loading: submitting } = useDocSignatures();
+  const { getPublicSigningData, submitSignature, getPublicSignedPdfUrl, requestOtp, verifyOtp, validateCnh, loading: submitting } = useDocSignatures();
 
   useEffect(() => {
     if (token) handleRequestOtp();
