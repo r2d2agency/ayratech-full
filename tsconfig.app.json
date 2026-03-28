@@ -19,6 +19,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@sm/*": [
+        "./ayratech-supermarket-manager/apps/web-admin/src/*"
       ]
     },
     "skipLibCheck": true,
@@ -27,6 +30,7 @@
     "useDefineForClassFields": true
   },
   "include": [
-    "src"
+    "src",
+    "ayratech-supermarket-manager/apps/web-admin/src"
   ]
 }
