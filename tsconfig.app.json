@@ -19,9 +19,6 @@
     "paths": {
       "@/*": [
         "./src/*"
-      ],
-      "@sm/*": [
-        "./ayratech-supermarket-manager/apps/web-admin/src/*"
       ]
     },
     "skipLibCheck": true,
