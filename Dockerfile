@@ -5,11 +5,13 @@ RUN apk add --no-cache python3 make g++ pkgconfig
 
 WORKDIR /app
 
-# Copy package files
+# Copy package manifests (root + workspaces needed for build)
 COPY package*.json ./
+COPY backend/package*.json ./backend/
+COPY ayratech-supermarket-manager/apps/web-admin/package*.json ./ayratech-supermarket-manager/apps/web-admin/
 
-# Install dependencies (use npm install for better compatibility)
-RUN npm install --legacy-peer-deps
+# Install dependencies including workspace devDependencies used at build time
+RUN npm install --legacy-peer-deps --include=dev
 
 # Copy source code
 COPY . .
