@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="pt-br"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Ayra Tech - Inventory Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "error": "#ff6e84",
+              "surface-container": "#1a1919",
+              "on-surface-variant": "#adaaaa",
+              "on-secondary-fixed-variant": "#005969",
+              "surface-container-highest": "#262626",
+              "primary": "#cc97ff",
+              "secondary": "#53ddfc",
+              "on-background": "#ffffff",
+              "on-tertiary-container": "#2f0018",
+              "on-tertiary-fixed": "#37001d",
+              "primary-fixed-dim": "#b971ff",
+              "tertiary-dim": "#ff67ad",
+              "error-dim": "#d73357",
+              "tertiary-fixed": "#ff8cbc",
+              "error-container": "#a70138",
+              "on-tertiary": "#4b002a",
+              "tertiary-fixed-dim": "#ff73b1",
+              "inverse-primary": "#842cd3",
+              "on-tertiary-fixed-variant": "#740044",
+              "primary-container": "#c284ff",
+              "on-error-container": "#ffb2b9",
+              "surface-tint": "#cc97ff",
+              "surface-container-low": "#131313",
+              "secondary-container": "#00687a",
+              "inverse-on-surface": "#565555",
+              "tertiary": "#ff6daf",
+              "secondary-fixed": "#65e1ff",
+              "on-secondary": "#004b58",
+              "secondary-dim": "#40ceed",
+              "background": "#0e0e0e",
+              "surface-bright": "#2c2c2c",
+              "primary-fixed": "#c284ff",
+              "on-error": "#490013",
+              "outline-variant": "#484847",
+              "on-surface": "#ffffff",
+              "tertiary-container": "#fa53a4",
+              "inverse-surface": "#fcf9f8",
+              "surface-container-lowest": "#000000",
+              "on-secondary-fixed": "#003a45",
+              "surface-container-high": "#201f1f",
+              "surface-variant": "#262626",
+              "surface-dim": "#0e0e0e",
+              "secondary-fixed-dim": "#48d4f3",
+              "on-primary-fixed-variant": "#430076",
+              "surface": "#0e0e0e",
+              "on-primary-fixed": "#000000",
+              "on-primary": "#47007c",
+              "primary-dim": "#9c48ea",
+              "outline": "#767575",
+              "on-primary-container": "#360061",
+              "on-secondary-container": "#ecfaff"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #0e0e0e;
+            color: #ffffff;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass-panel {
+            background: rgba(38, 38, 38, 0.4);
+            backdrop-filter: blur(12px);
+        }
+    </style>
+</head>
+<body class="font-body selection:bg-primary selection:text-on-primary">
+<!-- SideNavBar (Shared Component JSON Mapping) -->
+<aside class="h-screen w-64 fixed left-0 top-0 border-r border-white/10 bg-[#0e0e0e] shadow-[20px_0_48px_rgba(0,0,0,0.5)] flex flex-col z-50 overflow-y-auto">
+<div class="p-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-[0_0_15px_rgba(204,151,255,0.4)]">
+<span class="material-symbols-outlined text-on-primary" style="font-variation-settings: 'FILL' 1;">deployed_code</span>
+</div>
+<div>
+<h1 class="text-xl font-bold text-[#cc97ff] tracking-tighter font-headline">Ayra Tech</h1>
+<p class="font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] text-gray-500">Promoter Management</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 mt-4 px-2 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">route</span>
+<span>Rotas</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">badge</span>
+<span>RH</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-[#cc97ff] bg-[#cc97ff]/10 border-r-2 border-[#cc97ff] font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] transition-all duration-200" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventário</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">groups</span>
+<span>Clientes</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem] hover:bg-white/5 transition-all duration-200" href="#">
+<span class="material-symbols-outlined">assessment</span>
+<span>Relatórios</span>
+</a>
+</nav>
+<div class="mt-auto p-4 border-t border-white/5 space-y-1">
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem]" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-4 py-3 text-gray-500 hover:text-gray-300 transition-colors font-['Space_Grotesk'] uppercase tracking-wider text-[0.6875rem]" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- TopAppBar (Shared Component JSON Mapping) -->
+<header class="fixed top-0 right-0 left-64 h-16 z-40 bg-[#0e0e0e]/80 backdrop-blur-md flex justify-between items-center px-8 border-b border-white/5">
+<div class="flex items-center gap-4 flex-1">
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-lg">search</span>
+<input class="w-full bg-surface-container-highest border-none rounded-full py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-[#53ddfc]/50 placeholder-gray-500" placeholder="Search products, brands or PDVs..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<button class="text-gray-400 hover:text-[#53ddfc] transition-colors">
+<span class="material-symbols-outlined">dark_mode</span>
+</button>
+<button class="text-gray-400 hover:text-[#53ddfc] transition-colors relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-tertiary rounded-full"></span>
+</button>
+</div>
+<div class="h-8 w-[1px] bg-white/10"></div>
+<div class="flex items-center gap-3 group cursor-pointer">
+<span class="font-['Space_Grotesk'] font-medium text-sm text-gray-300 group-hover:text-primary transition-colors">Profile</span>
+<img alt="User Avatar" class="w-8 h-8 rounded-full border border-primary/30" data-alt="close-up portrait of a professional manager with subtle purple rim lighting in a high-tech studio environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx2aZlA_UMwgQexOvyHxSR0b1yh39zBXER2mIprmvtDTG2y9VzM-RuyyMKGd2xU_BcA2OaFjeN_oTRocPm5WbU9P4BM4XIch4lKxksyvQxGv_pR-8xW7QPc2DIoV-ltuH0xyIVV3hk0Jss8VANMDdNUkg_NTGPnaXry7cS99A32yDZg2MtE3_HlRPw0mSwscyth4QCytiGZ6VRU4CBqhNkqLyIYe04UnCfEmUxp2hTcnHDAz28shZsJDJdUll2UCowBFzUgTk6Wg"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-64 pt-16 min-h-screen bg-surface p-8">
+<div class="max-w-7xl mx-auto space-y-8">
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+<div>
+<h2 class="text-3xl font-bold font-headline tracking-tight text-white">Inventário &amp; Catálogo</h2>
+<p class="text-gray-400 mt-1">Gerencie produtos, categorias e vínculos com PDVs em tempo real.</p>
+</div>
+<div class="flex gap-3">
+<button class="px-6 py-2.5 bg-surface-container-highest text-white rounded-xl flex items-center gap-2 hover:bg-surface-bright transition-all font-medium border border-white/5">
+<span class="material-symbols-outlined text-secondary">file_download</span>
+                        Exportar
+                    </button>
+<button class="px-6 py-2.5 bg-gradient-to-r from-primary to-primary-dim text-on-primary rounded-xl flex items-center gap-2 hover:shadow-[0_0_20px_rgba(204,151,255,0.4)] transition-all font-bold">
+<span class="material-symbols-outlined">add</span>
+                        Novo Produto
+                    </button>
+</div>
+</div>
+<!-- Bento Grid Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+<div class="col-span-1 p-6 rounded-xl bg-surface-container-low border border-white/5 relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-8xl">inventory_2</span>
+</div>
+<p class="text-label-sm font-headline uppercase text-gray-500 tracking-widest">Total Produtos</p>
+<h3 class="text-3xl font-bold mt-2 text-primary">1,284</h3>
+<div class="mt-4 flex items-center gap-2 text-xs text-secondary">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12% este mês</span>
+</div>
+</div>
+<div class="col-span-1 p-6 rounded-xl bg-surface-container-low border border-white/5 relative overflow-hidden group">
+<div class="absolute -right-4 -bottom-4 opacity-5 group-hover:opacity-10 transition-opacity">
+<span class="material-symbols-outlined text-8xl">category</span>
+</div>
+<p class="text-label-sm font-headline uppercase text-gray-500 tracking-widest">Categorias</p>
+<h3 class="text-3xl font-bold mt-2 text-secondary">24</h3>
+<p class="mt-4 text-xs text-gray-400">4 novas adicionadas</p>
+</div>
+<div class="col-span-1 md:col-span-2 p-6 rounded-xl bg-surface-container-low border border-white/5 flex justify-between items-center relative overflow-hidden">
+<div class="z-10">
+<p class="text-label-sm font-headline uppercase text-gray-500 tracking-widest">Ocupação de Estoque</p>
+<h3 class="text-3xl font-bold mt-2 text-white">82%</h3>
+<div class="mt-4 w-48 h-2 bg-surface-container-highest rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-secondary to-primary w-[82%]"></div>
+</div>
+</div>
+<div class="hidden lg:block">
+<div class="w-24 h-24 rounded-full border-4 border-surface-container-highest flex items-center justify-center relative">
+<svg class="absolute inset-0 w-full h-full -rotate-90">
+<circle cx="48" cy="48" fill="none" r="42" stroke="#53ddfc" stroke-dasharray="264" stroke-dashoffset="47" stroke-width="6"></circle>
+</svg>
+<span class="text-sm font-bold text-secondary">82%</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Content Area: Tabs and Management -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- Left Column: Form (Contextual Task) -->
+<div class="lg:col-span-4 bg-surface-container-low rounded-xl p-8 border border-white/5 shadow-xl sticky top-24">
+<h4 class="text-xl font-bold font-headline mb-6 text-white flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">add_circle</span>
+                        Cadastro Rápido
+                    </h4>
+<form class="space-y-6">
+<div class="space-y-2">
+<label class="block text-xs font-headline uppercase text-gray-500 tracking-widest">Nome do Produto</label>
+<input class="w-full bg-surface-container-highest border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/50 text-white placeholder-gray-600" placeholder="Ex: Bebida Energética 500ml" type="text"/>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-2">
+<label class="block text-xs font-headline uppercase text-gray-500 tracking-widest">Marca</label>
+<select class="w-full bg-surface-container-highest border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/50 text-white appearance-none">
+<option>Monster</option>
+<option>Red Bull</option>
+<option>TNT</option>
+</select>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-headline uppercase text-gray-500 tracking-widest">Categoria</label>
+<select class="w-full bg-surface-container-highest border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-primary/50 text-white appearance-none">
+<option>Bebidas</option>
+<option>Snacks</option>
+<option>Higiene</option>
+</select>
+</div>
+</div>
+<div class="space-y-2">
+<label class="block text-xs font-headline uppercase text-gray-500 tracking-widest">Vincular PDVs (Clientes)</label>
+<div class="flex flex-wrap gap-2 mt-2">
+<span class="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20 flex items-center gap-1">Pão de Açúcar <span class="material-symbols-outlined text-[10px] cursor-pointer">close</span></span>
+<span class="px-3 py-1 bg-primary/10 text-primary text-xs rounded-full border border-primary/20 flex items-center gap-1">Carrefour <span class="material-symbols-outlined text-[10px] cursor-pointer">close</span></span>
+<button class="px-3 py-1 bg-surface-container-highest text-gray-400 text-xs rounded-full border border-white/5 flex items-center gap-1 hover:text-white transition-colors" type="button">
+<span class="material-symbols-outlined text-xs">add</span> Adicionar
+                                </button>
+</div>
+</div>
+<div class="pt-4">
+<button class="w-full py-4 bg-gradient-to-r from-primary to-primary-dim text-on-primary font-bold rounded-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-primary/20" type="submit">
+                                SALVAR PRODUTO
+                            </button>
+</div>
+</form>
+</div>
+<!-- Right Column: Product List and Tabs -->
+<div class="lg:col-span-8 space-y-6">
+<!-- Custom Tabs -->
+<div class="flex border-b border-white/5 overflow-x-auto scrollbar-hide">
+<button class="px-8 py-4 text-primary border-b-2 border-primary font-headline uppercase tracking-widest text-xs font-bold whitespace-nowrap">Produtos</button>
+<button class="px-8 py-4 text-gray-500 hover:text-gray-300 font-headline uppercase tracking-widest text-xs font-medium whitespace-nowrap">Marcas</button>
+<button class="px-8 py-4 text-gray-500 hover:text-gray-300 font-headline uppercase tracking-widest text-xs font-medium whitespace-nowrap">Categorias</button>
+<button class="px-8 py-4 text-gray-500 hover:text-gray-300 font-headline uppercase tracking-widest text-xs font-medium whitespace-nowrap">PDVs (Clientes)</button>
+</div>
+<!-- Enhanced Product Table -->
+<div class="bg-surface-container-low rounded-2xl overflow-hidden border border-white/5">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-highest/50 border-b border-white/5">
+<th class="px-6 py-4 text-xs font-headline uppercase text-gray-500 tracking-widest">Produto</th>
+<th class="px-6 py-4 text-xs font-headline uppercase text-gray-500 tracking-widest">Marca/Cat</th>
+<th class="px-6 py-4 text-xs font-headline uppercase text-gray-500 tracking-widest">PDVs Vinculados</th>
+<th class="px-6 py-4 text-xs font-headline uppercase text-gray-500 tracking-widest">Status</th>
+<th class="px-6 py-4 text-right"></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="group hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-highest border border-white/5">
+<img class="w-full h-full object-cover" data-alt="product shot of a sleek neon-colored energy drink can on a dark reflective surface with purple backlighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhCLJSJ91ZzXF6MPlwXRmU0YSM1n-CWeb1JURPq-oqgnmGK5jtBnb2lL5U9IeZYl0QOMeiW_KOzi1cH6V6WlKld0hxYBV00-UIFHJZjQ5yUnZzlq-0tFKDhyI7OHq7dDVn4b-7QceEvVvgLO8IVdc2eR4Zze_BJ_LyDrsKg6AC-oXjuLqK4y6YAS7tIZyvJi2pEEeYMmnRLNxvRkQ7hHCNnRwGF0EcmspHF-qxKfeUJDTBZngAQeB7rzrwT1-XLqg6nCGv_RkWWA"/>
+</div>
+<div>
+<p class="font-bold text-white">Ultra Energy Punch 473ml</p>
+<p class="text-xs text-gray-500">SKU: AY-0092-BEB</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-1">
+<p class="text-sm font-medium text-secondary">Monster Energy</p>
+<p class="text-xs text-gray-500">Bebidas &gt; Energéticos</p>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+<img alt="PDV 1" data-alt="close-up of a high-end supermarket logo badge with minimalist design and glass texture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjXnhL9GDto8lx5rHRPXskBS5WqwxKJN1nQJPfUildavDbbGGtB95aYPHpuKhcAZ8vV2Ukk1nrhFd1QzzOwa6rKG7s1NQy1RsrCa1zshNqJicXlZcdO7yWo7gzvq-hnmn2fbylFldmfjXfkiN85gcpDoIeMcHnKu3V9mj0lUuYJGfd9qJDI8FzAV827QUrzSGAJJeTL3muYlMQwGd9PSWW_Ri8NG02_CyakqaboCPsVe6vYqALSN6apLo4Gn4ADQhvON5r0Jt1dw"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+<img alt="PDV 2" data-alt="vibrant retail chain emblem on a dark grey background with futuristic lighting effects" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD7DZim19UTxXK0VNoJhS7iu4x9ciQa5yu13THGy5V1Y9UDUADox2l49bxRhImzL-K7gdWKa6LTOb8F1a5MBC8DGl51arkvzlSqYbfi8VrlXGhTSo-KKIfIU3RiVZ2LO-n1hOAjhgp_gpVQ8jTg_WGJzDGg21JvsEMiz9Fp0PwDXPAPxxMODSfh_Md6-u6Mo5ayFjpu1kVCcarQTHzuMb3ifYrst_VIiaCvQn_TpahxVmtn3u8GE6YiMSZdLAKS8UMxvkUizZ2O9A"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                                +8
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold uppercase tracking-wider border border-emerald-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                            Ativo
+                                        </span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="p-2 text-gray-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-highest border border-white/5">
+<img class="w-full h-full object-cover" data-alt="premium box of chocolates displayed on a dark velvet cloth with soft cinematic warm lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAS519THrLQqtOq-wdKHFxg2CReTZHjGpNOShxJe8hjX-Ufes8y7KrvkjkegkX4kPOICzJZmg67epXROwPtDshSL_bZ0HJ9FAtX7PypH8czoKdZVvoMkaRzUVHkNtn0Vz3e6z47yY6lFrbSO-CNMIa0OsFgT8xI87nGR0io4f244ZApAYr8WRaVANng7NTPUeNLnfzIHrhlq7-E0SphLR_VZjYMkfvV47rs5fKe64bYeqnnEdR8-Fjsm86q-DnVwBlv5fvqkFXuOQ"/>
+</div>
+<div>
+<p class="font-bold text-white">Chocolate Selection 250g</p>
+<p class="text-xs text-gray-500">SKU: AY-0124-ALM</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-1">
+<p class="text-sm font-medium text-secondary">Nestlé Premium</p>
+<p class="text-xs text-gray-500">Alimentos &gt; Doces</p>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-white overflow-hidden">
+<img alt="PDV 3" data-alt="professional modern store icon with stylized letter and glowing cyan borders" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDVuJFIXXBH19dAhQcS4L2PJlVFjoEwnRhOdQXVb0pDCZmzosmV2gI3Du9ts_XAnQl3wMUSuRUsikTazTuYq9czPA789NijlM0AIb6b5IQUVd-r4y1XGILx6FRkAbvCKmptSuPYldMYde85qiUrgGokEkadCxNSUzRSAgZCDt4ulZSOhTeYUSqaEclCQy5jpOmk_6VaILinOshlNHb4REka5gsnXF2pntAJb1tqOPRZI4y1dRRz-Q41vfnhnONUbJ86sP-fqv07ww"/>
+</div>
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                                +15
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-500 text-[10px] font-bold uppercase tracking-wider border border-amber-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            Baixo Estoque
+                                        </span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="p-2 text-gray-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+<tr class="group hover:bg-white/[0.02] transition-colors">
+<td class="px-6 py-5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-lg overflow-hidden bg-surface-container-highest border border-white/5">
+<img class="w-full h-full object-cover" data-alt="pack of paper towels with technical packaging design floating in a dark digital space with blue highlights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzqarWLahd3A585_-Yp6KAAk3-FCkcZLAZrL5ZOjMUVGA9a9_oQ-c3WCZEgL8x79mGwivUcz9WMxDB0YoK-7y6-rYlYicUT2dRKXy_sjvN_nbA5AuxaC7J4qQn-HP6wJRC52fHQm_0qTFSjMAnbT0lr-dgvcjpMeH9zsWpzE8P3MRdcnQdla75RxioqoP2mlzg11wWJnYujsApplZHY69teMTl9JzHzAtq87IeDYtWosjg-vGzhw6KTZoFvYs2VwhHT1LwB_20xA"/>
+</div>
+<div>
+<p class="font-bold text-white">Papel Toalha Super Absorvente</p>
+<p class="text-xs text-gray-500">SKU: AY-0881-LIM</p>
+</div>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="space-y-1">
+<p class="text-sm font-medium text-secondary">Kimberly-Clark</p>
+<p class="text-xs text-gray-500">Limpeza &gt; Papéis</p>
+</div>
+</td>
+<td class="px-6 py-5">
+<div class="flex -space-x-2">
+<div class="w-8 h-8 rounded-full border-2 border-surface-container-low bg-surface-container-highest flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                                Nenhum
+                                            </div>
+</div>
+</td>
+<td class="px-6 py-5">
+<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-500/10 text-gray-500 text-[10px] font-bold uppercase tracking-wider border border-gray-500/20">
+<span class="w-1.5 h-1.5 rounded-full bg-gray-500"></span>
+                                            Inativo
+                                        </span>
+</td>
+<td class="px-6 py-5 text-right">
+<button class="p-2 text-gray-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between px-2">
+<p class="text-xs text-gray-500">Mostrando 3 de 1,284 produtos</p>
+<div class="flex gap-2">
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-low text-gray-400 border border-white/5 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-on-primary font-bold text-xs">1</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-low text-gray-400 border border-white/5 hover:bg-surface-container-highest transition-colors font-bold text-xs">2</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-low text-gray-400 border border-white/5 hover:bg-surface-container-highest transition-colors font-bold text-xs">3</button>
+<button class="w-8 h-8 flex items-center justify-center rounded-lg bg-surface-container-low text-gray-400 border border-white/5 hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- FAB Action (Contextual: Add product) -->
+<button class="fixed bottom-8 right-8 w-14 h-14 bg-gradient-to-tr from-primary to-primary-dim text-on-primary rounded-full shadow-[0_0_30px_rgba(204,151,255,0.4)] flex items-center justify-center hover:scale-110 active:scale-95 transition-transform z-50">
+<span class="material-symbols-outlined text-3xl">qr_code_scanner</span>
+</button>
+</body></html>

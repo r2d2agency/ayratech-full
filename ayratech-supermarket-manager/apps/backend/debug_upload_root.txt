@@ -1,0 +1,2 @@
+UPLOAD_ROOT: C:\Users\r2d2\Documents\trae_projects\ayratech-supermarket-manager\apps\backend\uploads
+CWD: C:\Users\r2d2\Documents\trae_projects\ayratech-supermarket-manager\apps\backend

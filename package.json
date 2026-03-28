@@ -3,12 +3,31 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "backend",
+    "ayratech-supermarket-manager/apps/*"
+  ],
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:backend": "npm run dev -w whatsale-backend",
+    "dev:supermarket-backend": "npm run start:dev -w @ayratech/supermarket-backend",
+    "dev:supermarket-web-admin": "npm run dev -w @ayratech/supermarket-web-admin",
+    "dev:supermarket-web-app": "npm run dev -w @ayratech/supermarket-web-app",
+    "dev:supermarket-promoter-pwa": "npm run dev -w @ayratech/supermarket-promoter-pwa",
+    "dev:supermarket-mobile": "npm run start -w @ayratech/supermarket-mobile",
+    "start:backend": "npm run start -w whatsale-backend",
+    "build:supermarket-backend": "npm run build -w @ayratech/supermarket-backend",
+    "start:supermarket-backend": "npm run start:prod -w @ayratech/supermarket-backend",
+    "build:supermarket-web-admin": "npm run build -w @ayratech/supermarket-web-admin",
+    "preview:supermarket-web-admin": "npm run preview -w @ayratech/supermarket-web-admin",
+    "build:supermarket-promoter-pwa": "npm run build -w @ayratech/supermarket-promoter-pwa",
+    "preview:supermarket-promoter-pwa": "npm run preview -w @ayratech/supermarket-promoter-pwa",
+    "lint:workspaces": "npm run lint -ws --if-present",
+    "typecheck:workspaces": "npm run typecheck -ws --if-present"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

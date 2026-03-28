@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --surface: #f8fafc;
+  --surface-container-low: #ffffff;
+  --surface-container-highest: #f1f5f9;
+  --surface-bright: #ffffff;
+  --outline-variant: #e2e8f0;
+
+  --on-background: #0f172a;
+  --on-surface-variant: #64748b;
+
+  --color-background: var(--surface);
+  --color-panel: var(--surface-container-low);
+  --color-border: var(--outline-variant);
+  --color-text: var(--on-background);
+  --color-muted: var(--on-surface-variant);
+  --color-primary: #8f0090;
+  --color-secondary: #53ddfc;
+  --color-tertiary: #ff6daf;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-sans);
+}
+
+.dark {
+  --surface: #0f1115;
+  --surface-container-low: #16181d;
+  --surface-container-highest: #1e2128;
+  --surface-bright: #252830;
+  --outline-variant: rgba(255,255,255,0.08);
+
+  --on-background: #f8fafc;
+  --on-surface-variant: #94a3b8;
+
+  --color-background: var(--surface);
+  --color-panel: var(--surface-container-low);
+  --color-border: var(--outline-variant);
+  --color-text: var(--on-background);
+  --color-muted: var(--on-surface-variant);
+  --color-primary: #8f0090;
+  --color-secondary: #53ddfc;
+  --color-tertiary: #ff6daf;
+}
+
+@layer base {
+  body {
+    @apply text-[color:var(--color-text)];
+  }
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"],
+  select,
+  textarea {
+    background-color: var(--surface-container-highest);
+    color: var(--on-background);
+    border: 1px solid var(--outline-variant);
+    border-radius: 0.75rem;
+    outline: none;
+    color-scheme: light;
+  }
+  .dark input[type="date"],
+  .dark input[type="time"],
+  .dark input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+  input[type="text"]:focus,
+  input[type="email"]:focus,
+  input[type="password"]:focus,
+  input[type="number"]:focus,
+  input[type="tel"]:focus,
+  select:focus,
+  textarea:focus {
+    border-color: var(--color-secondary);
+  }
+}
+
+@layer utilities {
+  .text-ayra { color: var(--color-text); }
+  .bg-ayra { background-color: var(--color-background); }
+  .panel-ayra { background-color: var(--color-panel); border-color: var(--color-border); }
+  .border-ayra { border-color: var(--color-border); }
+  .muted-ayra { color: var(--color-muted); }
+  .primary-ayra { color: var(--color-primary); }
+  .bg-primary-ayra { background-color: var(--color-primary); }
+
+  .dark .bg-white { background-color: var(--surface-container-low) !important; }
+  .dark .text-slate-900 { color: var(--color-text) !important; }
+  .dark .text-slate-800 { color: var(--color-text) !important; }
+  .dark .text-slate-700 { color: var(--color-text) !important; }
+  .dark .text-slate-600 { color: var(--color-muted) !important; }
+  .dark .text-slate-500 { color: var(--color-muted) !important; }
+  .dark .border-slate-200 { border-color: var(--color-border) !important; }
+  .dark .bg-slate-50 { background-color: var(--surface-container-highest) !important; }
+  .dark .bg-slate-100 { background-color: var(--surface-bright) !important; }
+
+  .dark .text-gray-900 { color: var(--color-text) !important; }
+  .dark .text-gray-800 { color: var(--color-text) !important; }
+  .dark .text-gray-700 { color: var(--color-text) !important; }
+  .dark .text-gray-600 { color: var(--color-muted) !important; }
+  .dark .text-gray-500 { color: var(--color-muted) !important; }
+  .dark .text-gray-400 { color: var(--color-muted) !important; }
+  .dark .border-gray-200 { border-color: var(--color-border) !important; }
+  .dark .border-gray-300 { border-color: var(--color-border) !important; }
+  .dark .bg-gray-50 { background-color: var(--surface-container-highest) !important; }
+  .dark .bg-gray-100 { background-color: var(--surface-bright) !important; }
+}

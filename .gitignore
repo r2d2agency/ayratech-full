@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# evitar arquivos "quebrados" gerados por shell/IDE em paths do Windows
+ayratech-supermarket-manager/ers*
+ayratech-supermarket-manager/criptssafe_rm_aliases.ps1*

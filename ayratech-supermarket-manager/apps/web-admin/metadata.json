@@ -1,0 +1,7 @@
+{
+  "name": "Ayratech Supermarket Manager",
+  "description": "A comprehensive system for registering and managing supermarket points of sale, including location mapping, operational hours, and brand associations.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
