@@ -4,7 +4,7 @@ const normalizeApiUrl = (value?: string) => {
   let url = String(value ?? '').trim();
 
   if (!url) {
-    url = import.meta.env.DEV ? 'http://localhost:3000' : '/api';
+    url = '/api';
   }
 
   if (!/^https?:\/\//i.test(url)) {
