@@ -158,8 +158,8 @@ const App = () => (
             <Route path="/respostas-rapidas" element={<ProtectedRoute><RespostasRapidas /></ProtectedRoute>} />
             <Route path="/meta-templates" element={<ProtectedRoute><MetaTemplates /></ProtectedRoute>} />
             <Route path="/assinaturas" element={<ProtectedRoute><Assinaturas /></ProtectedRoute>} />
-            <Route path="/supermarket" element={<ProtectedRoute><Supermarket /></ProtectedRoute>} />
-            <Route path="/supermarket/:view" element={<ProtectedRoute><Supermarket /></ProtectedRoute>} />
+            <Route path="/supermarket" element={<ProtectedRoute><SupermarketModule /></ProtectedRoute>} />
+            <Route path="/supermarket/:view" element={<ProtectedRoute><SupermarketModule /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ApiDocumentation />} />
             <Route path="/f/:slug" element={<PublicFormPage />} />
             <Route path="/assinar/:token" element={<AssinarDocumento />} />
