@@ -30,7 +30,6 @@
     "useDefineForClassFields": true
   },
   "include": [
-    "src",
-    "ayratech-supermarket-manager/apps/web-admin/src"
+    "src"
   ]
 }
