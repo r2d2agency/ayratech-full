@@ -698,9 +698,9 @@ export function ChatArea({
       <div className="flex-1 flex flex-col items-center justify-center bg-muted/30 text-muted-foreground h-full min-h-0">
         <div className="flex flex-col items-center justify-center text-center -mt-12">
           <img 
-            src="/assets/ayratech_logo.jpg" 
-            alt="Logo" 
-            className="h-32 w-auto mb-8 opacity-80"
+            src={new URL('@/assets/ayratech_logo.jpg', import.meta.url).href}
+            alt="AyraTech Logo" 
+            className="h-32 w-auto mb-8 opacity-80 rounded-2xl"
           />
           <h3 className="text-xl font-semibold text-foreground mb-3">Selecione uma conversa</h3>
           <p className="text-sm text-muted-foreground max-w-[300px]">Escolha uma conversa na lista à esquerda para começar a atender</p>

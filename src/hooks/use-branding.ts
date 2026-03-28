@@ -72,12 +72,12 @@ function makeDarkVariant(light: ThemeModeColors): ThemeModeColors {
 
 export const THEME_PRESETS: Record<string, { name: string; colors: ThemeColors; preview: string[] }> = {
   default: {
-    name: 'Gleego (Padrão)',
+    name: 'AyraTech (Padrão)',
     colors: {
-      light: { primary: '24 90% 52%', secondary: '217 60% 92%', accent: '152 50% 90%', sidebar: '24 90% 52%' },
-      dark: { primary: '24 92% 55%', secondary: '217 40% 16%', accent: '152 40% 16%', sidebar: '24 92% 55%' },
+      light: { primary: '271 70% 55%', secondary: '271 50% 92%', accent: '25 90% 90%', sidebar: '271 70% 55%' },
+      dark: { primary: '271 75% 58%', secondary: '271 40% 16%', accent: '25 60% 16%', sidebar: '271 75% 58%' },
     },
-    preview: ['#e8600a', '#c2d6f2', '#c8f0dc'],
+    preview: ['#8b5cf6', '#e2d6f2', '#f5dcc2'],
   },
   blue: {
     name: 'Azul Corporativo',
