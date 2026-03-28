@@ -1,36 +1,37 @@
 import axios from 'axios';
 
-export const API_URL = (() => {
-  let url = import.meta.env.VITE_API_URL;
-  
-  // Fallback if not defined - check SUPERMARKET_API_URL first
-  if (!url) {
-    url = import.meta.env.VITE_SUPERMARKET_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : 'https://api.ayratech.app.br');
-  }
-  
-  // Ensure it's a string
-  url = String(url).trim();
+const normalizeApiUrl = (value?: string) => {
+  let url = String(value ?? '').trim();
 
-  // If it doesn't start with http, assume it's a domain or partial URL
-  if (!url.startsWith('http')) {
-    // Remove leading dot if present (fix for some env config issues)
-    if (url.startsWith('.')) {
-      url = url.substring(1);
-    }
-    // Remove leading slashes
-    while (url.startsWith('/')) {
-        url = url.substring(1);
-    }
-    url = `https://${url}`;
+  if (!url) {
+    url = import.meta.env.VITE_SUPERMARKET_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : '/api');
   }
-  
-  // Remove trailing slash to be consistent
-  if (url.endsWith('/')) {
-    url = url.slice(0, -1);
+
+  if (!/^https?:\/\//i.test(url)) {
+    const cleaned = url.replace(/^\.+/, '').replace(/^\/+|\/+$/g, '');
+
+    if (cleaned.includes('.')) {
+      url = `https://${cleaned}`;
+    } else {
+      return `/${cleaned || 'api'}`;
+    }
   }
-  
-  return url;
-})();
+
+  try {
+    const parsed = new URL(url);
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(parsed.hostname);
+
+    if (!isLocalhost && (!parsed.pathname || parsed.pathname === '/')) {
+      parsed.pathname = '/api';
+    }
+
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return url.replace(/\/$/, '');
+  }
+};
+
+export const API_URL = normalizeApiUrl(import.meta.env.VITE_API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -49,9 +50,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('token');
-      // Optional: Redirect to login page if not already there
       if (window.location.pathname !== '/login') {
-         window.location.href = '/login';
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
