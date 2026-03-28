@@ -61,7 +61,7 @@ import Assinaturas from "./pages/Assinaturas";
 import AssinarDocumento from "./pages/AssinarDocumento";
 import VerificarDocumento from "./pages/VerificarDocumento";
 import NotFound from "./pages/NotFound";
-import Supermarket from "./pages/Supermarket";
+import SupermarketModule from "./pages/SupermarketModule";
 
 const queryClient = new QueryClient();
 
