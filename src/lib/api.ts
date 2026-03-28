@@ -34,7 +34,29 @@ const shouldRetry = (method: string, status?: number) => {
 
 const isAuthMutationFallbackEndpoint = (endpoint: string) => {
   const normalized = endpoint.toLowerCase();
-  return normalized === '/api/auth/login' || normalized === '/api/auth/register';
+  return (
+    normalized === '/api/auth/login' ||
+    normalized === '/api/auth/register' ||
+    normalized === '/auth/login' ||
+    normalized === '/auth/register'
+  );
+};
+
+const getEndpointCandidates = (endpoint: string, method: string) => {
+  if (method === 'GET' || !isAuthMutationFallbackEndpoint(endpoint)) {
+    return [endpoint];
+  }
+
+  const normalized = endpoint.toLowerCase();
+  if (normalized.startsWith('/api/')) {
+    return [endpoint, endpoint.replace(/^\/api\//i, '/')];
+  }
+
+  if (!normalized.startsWith('/api/')) {
+    return [endpoint, `/api${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`];
+  }
+
+  return [endpoint];
 };
 
 const shouldLogNow = (key: string) => {
@@ -66,12 +88,15 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
   }
 
   const baseCandidates = getBaseCandidates(endpoint);
+  const endpointCandidates = getEndpointCandidates(endpoint, method);
+  const requestUrls = endpointCandidates.flatMap((endpointCandidate) =>
+    baseCandidates.map((base) => buildUrl(base, endpointCandidate))
+  );
   const retries = method === 'GET' ? MAX_GET_RETRIES : 0;
   let lastError: Error | null = null;
 
-  for (let baseIndex = 0; baseIndex < baseCandidates.length; baseIndex++) {
-    const base = baseCandidates[baseIndex];
-    const url = buildUrl(base, endpoint);
+  for (let urlIndex = 0; urlIndex < requestUrls.length; urlIndex++) {
+    const url = requestUrls[urlIndex];
 
     for (let attempt = 0; attempt <= retries; attempt++) {
       try {
@@ -130,9 +155,9 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
             method !== 'GET' &&
             isAuthMutationFallbackEndpoint(endpoint) &&
             [404, 405].includes(response.status);
-          const shouldTryNextBase =
-            baseIndex < baseCandidates.length - 1 && (canFallbackGet || canFallbackAuthMutation);
-          if (shouldTryNextBase) {
+          const shouldTryNextUrl =
+            urlIndex < requestUrls.length - 1 && (canFallbackGet || canFallbackAuthMutation);
+          if (shouldTryNextUrl) {
             lastError = new Error(`${baseMsg}${details}`);
             break;
           }
@@ -158,7 +183,7 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
         }
 
         const shouldTryNextBase =
-          baseIndex < baseCandidates.length - 1 &&
+          urlIndex < requestUrls.length - 1 &&
           (method === 'GET' || isAuthMutationFallbackEndpoint(endpoint));
         if (shouldTryNextBase) {
           lastError = error instanceof Error ? error : new Error('Erro de rede');
