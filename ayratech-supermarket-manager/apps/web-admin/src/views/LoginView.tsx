@@ -40,7 +40,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       // 1. Tentar login como usuário comum
       try {
-        const response = await api.post('/auth/login', { email, password });
+        const response = await api.post('auth/login', { email, password });
         localStorage.setItem('token', response.data.access_token);
         onLogin();
         return;
