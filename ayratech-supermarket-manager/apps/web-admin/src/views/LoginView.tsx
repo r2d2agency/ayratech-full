@@ -73,7 +73,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
     try {
-      await api.post('/auth/register', { email, password });
+      await api.post('auth/register', { email, password });
       alert('Usuário criado com sucesso! Agora clique em Entrar.');
       setError('');
     } catch (err: any) {
