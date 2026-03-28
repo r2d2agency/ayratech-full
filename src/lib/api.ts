@@ -1,4 +1,12 @@
-const ENV_API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const normalizeApiBaseUrl = (value?: string) => {
+  const raw = String(value || '').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+
+  // Evita URL final duplicada como /api/api/... quando o endpoint já vem com /api
+  return raw.replace(/\/api$/i, '');
+};
+
+const ENV_API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL);
 const isBrowser = typeof window !== 'undefined';
 const isLocalhost = isBrowser && ['localhost', '127.0.0.1'].includes(window.location.hostname);
 
