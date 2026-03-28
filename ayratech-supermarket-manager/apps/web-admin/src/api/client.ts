@@ -3,9 +3,9 @@ import axios from 'axios';
 export const API_URL = (() => {
   let url = import.meta.env.VITE_API_URL;
   
-  // Fallback if not defined
+  // Fallback if not defined - check SUPERMARKET_API_URL first
   if (!url) {
-    url = import.meta.env.DEV ? 'http://localhost:3000' : 'https://api.ayratech.app.br';
+    url = import.meta.env.VITE_SUPERMARKET_API_URL || (import.meta.env.DEV ? 'http://localhost:3000' : 'https://api.ayratech.app.br');
   }
   
   // Ensure it's a string
