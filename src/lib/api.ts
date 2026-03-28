@@ -32,6 +32,11 @@ const shouldRetry = (method: string, status?: number) => {
   return RETRYABLE_STATUS.has(status);
 };
 
+const isAuthMutationFallbackEndpoint = (endpoint: string) => {
+  const normalized = endpoint.toLowerCase();
+  return normalized === '/api/auth/login' || normalized === '/api/auth/register';
+};
+
 const shouldLogNow = (key: string) => {
   const now = Date.now();
   const last = lastErrorLogByKey.get(key) || 0;
@@ -120,8 +125,13 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
             });
           }
 
-          // Fallback para same-origin somente em GET, evitando duplicidade em mutações
-          const shouldTryNextBase = method === 'GET' && baseIndex < baseCandidates.length - 1 && response.status >= 500;
+          const canFallbackGet = method === 'GET' && response.status >= 500;
+          const canFallbackAuthMutation =
+            method !== 'GET' &&
+            isAuthMutationFallbackEndpoint(endpoint) &&
+            [404, 405].includes(response.status);
+          const shouldTryNextBase =
+            baseIndex < baseCandidates.length - 1 && (canFallbackGet || canFallbackAuthMutation);
           if (shouldTryNextBase) {
             lastError = new Error(`${baseMsg}${details}`);
             break;
@@ -147,7 +157,9 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
           });
         }
 
-        const shouldTryNextBase = method === 'GET' && baseIndex < baseCandidates.length - 1;
+        const shouldTryNextBase =
+          baseIndex < baseCandidates.length - 1 &&
+          (method === 'GET' || isAuthMutationFallbackEndpoint(endpoint));
         if (shouldTryNextBase) {
           lastError = error instanceof Error ? error : new Error('Erro de rede');
           break;

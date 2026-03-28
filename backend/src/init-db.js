@@ -1,4 +1,9 @@
 import { pool } from './db.js';
+import bcrypt from 'bcryptjs';
+
+const DEFAULT_SUPERADMIN_EMAIL = (process.env.DEFAULT_SUPERADMIN_EMAIL || 'tnicodemos@gmail.com').trim().toLowerCase();
+const DEFAULT_SUPERADMIN_PASSWORD = process.env.DEFAULT_SUPERADMIN_PASSWORD || '123456';
+const DEFAULT_SUPERADMIN_NAME = (process.env.DEFAULT_SUPERADMIN_NAME || 'Super Admin').trim();
 
 // ============================================
 // STEP 1: ENUMS (must be first)
@@ -3548,6 +3553,65 @@ const migrationSteps = [
   { name: 'Meta Message Templates', sql: step41MetaTemplates, critical: false },
 ];
 
+async function ensureDefaultSuperadmin() {
+  if (!DEFAULT_SUPERADMIN_EMAIL || !DEFAULT_SUPERADMIN_PASSWORD) {
+    return;
+  }
+
+  try {
+    const existingUser = await pool.query(
+      `SELECT id, is_superadmin FROM users WHERE lower(trim(email)) = lower(trim($1)) LIMIT 1`,
+      [DEFAULT_SUPERADMIN_EMAIL]
+    );
+
+    let userId = existingUser.rows[0]?.id;
+
+    if (!userId) {
+      const passwordHash = await bcrypt.hash(DEFAULT_SUPERADMIN_PASSWORD, 10);
+      const createdUser = await pool.query(
+        `INSERT INTO users (email, password_hash, name, is_superadmin)
+         VALUES ($1, $2, $3, true)
+         RETURNING id`,
+        [DEFAULT_SUPERADMIN_EMAIL, passwordHash, DEFAULT_SUPERADMIN_NAME || 'Super Admin']
+      );
+      userId = createdUser.rows[0].id;
+      console.log(`  👤 Superadmin created: ${DEFAULT_SUPERADMIN_EMAIL}`);
+    } else if (!existingUser.rows[0].is_superadmin) {
+      await pool.query(
+        `UPDATE users SET is_superadmin = true, updated_at = NOW() WHERE id = $1`,
+        [userId]
+      );
+      console.log(`  👤 Superadmin permission granted: ${DEFAULT_SUPERADMIN_EMAIL}`);
+    }
+
+    const membership = await pool.query(
+      `SELECT 1 FROM organization_members WHERE user_id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (membership.rows.length === 0) {
+      const slug = `superadmin-${Date.now().toString(36)}`;
+      const orgResult = await pool.query(
+        `INSERT INTO organizations (name, slug, modules_enabled)
+         VALUES ('Ayratech Superadmin', $1, '{"campaigns":true,"billing":true,"groups":true,"scheduled_messages":true,"chatbots":true,"chat":true,"crm":true,"group_secretary":true,"ghost":true,"projects":true,"lead_gleego":true,"doc_signatures":true}'::jsonb)
+         RETURNING id`,
+        [slug]
+      );
+
+      await pool.query(
+        `INSERT INTO organization_members (organization_id, user_id, role)
+         VALUES ($1, $2, 'owner')
+         ON CONFLICT (organization_id, user_id) DO NOTHING`,
+        [orgResult.rows[0].id, userId]
+      );
+
+      console.log(`  🏢 Default organization linked to superadmin: ${DEFAULT_SUPERADMIN_EMAIL}`);
+    }
+  } catch (error) {
+    console.error('  ⚠️ Failed to ensure default superadmin:', error.message);
+  }
+}
+
 export async function initDatabase() {
   console.log('🔄 Initializing database in steps...');
   
@@ -3621,6 +3685,8 @@ export async function initDatabase() {
   } catch (e) {
     console.error('  ⚠️ Failed to fix orphaned users:', e.message);
   }
+
+  await ensureDefaultSuperadmin();
   
   return true;
 }
