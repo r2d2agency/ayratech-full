@@ -97,7 +97,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
     }
     try {
       await api.post('auth/reset', { email, password }, { headers: { 'x-admin-reset': 'AYRATECH_DEV_RESET' } });
-      const response = await api.post('/auth/login', { email, password });
+      const response = await api.post('auth/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
       onLogin();
     } catch (err: any) {
