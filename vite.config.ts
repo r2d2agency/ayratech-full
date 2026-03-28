@@ -91,6 +91,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@sm": path.resolve(__dirname, "./ayratech-supermarket-manager/apps/web-admin/src"),
     },
   },
 }));
