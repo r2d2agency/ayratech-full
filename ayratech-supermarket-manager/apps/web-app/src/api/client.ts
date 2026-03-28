@@ -1,7 +1,37 @@
 import axios from 'axios';
 
-// Get API URL from window object (injected by env) or default to localhost
-const API_URL = (window as any).env?.API_URL || 'http://localhost:3000';
+const normalizeApiUrl = (value?: string) => {
+  let url = String(value ?? '').trim();
+
+  if (!url) {
+    url = '/api';
+  }
+
+  if (!/^https?:\/\//i.test(url)) {
+    const cleaned = url.replace(/^\.+/, '').replace(/^\/+|\/+$/g, '');
+
+    if (cleaned.includes('.')) {
+      url = `https://${cleaned}`;
+    } else {
+      return `/${cleaned || 'api'}`;
+    }
+  }
+
+  try {
+    const parsed = new URL(url);
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(parsed.hostname);
+
+    if (!isLocalhost && (!parsed.pathname || parsed.pathname === '/')) {
+      parsed.pathname = '/api';
+    }
+
+    return parsed.toString().replace(/\/$/, '');
+  } catch {
+    return url.replace(/\/$/, '');
+  }
+};
+
+const API_URL = normalizeApiUrl((window as any).env?.API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
