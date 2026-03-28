@@ -83,6 +83,7 @@ interface ApiOptions {
 
 export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
   const { method = 'GET', body, auth = true } = options;
+  const isApiEndpoint = endpoint.toLowerCase().startsWith('/api/');
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -119,6 +120,7 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
 
         // Read body as text first for safer parsing
         const rawText = await response.text().catch(() => '');
+        const isHtmlPayload = rawText.trim().startsWith('<!') || rawText.includes('<html');
 
         if (contentType.includes('application/json') || rawText.trim().startsWith('{') || rawText.trim().startsWith('[')) {
           try {
@@ -127,7 +129,7 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
             data = { raw: rawText };
           }
         } else {
-          if ((rawText.trim().startsWith('<!') || rawText.includes('<html')) && shouldLogNow(`html:${url}:${response.status}`)) {
+          if (isHtmlPayload && shouldLogNow(`html:${url}:${response.status}`)) {
             // eslint-disable-next-line no-console
             console.error('[api] Got HTML instead of JSON', {
               url,
@@ -138,31 +140,37 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
           data = { raw: rawText };
         }
 
-        if (!response.ok) {
-          if (attempt < retries && shouldRetry(method, response.status)) {
+        const isInvalidApiPayload = response.ok && isApiEndpoint && isHtmlPayload;
+
+        if (!response.ok || isInvalidApiPayload) {
+          const statusCode = isInvalidApiPayload ? 502 : response.status;
+
+          if (attempt < retries && shouldRetry(method, statusCode)) {
             await sleep(250 * Math.pow(2, attempt));
             continue;
           }
 
-          const baseMsg = data?.error || data?.message || `Erro na requisição (${response.status})`;
+          const baseMsg = isInvalidApiPayload
+            ? 'Resposta inválida do servidor'
+            : data?.error || data?.message || `Erro na requisição (${statusCode})`;
           const details = data?.details ? `: ${data.details}` : '';
-          const logKey = `fail:${url}:${response.status}`;
+          const logKey = `fail:${url}:${statusCode}`;
           if (shouldLogNow(logKey)) {
             // eslint-disable-next-line no-console
             console.error('[api] request failed', {
               url,
-              status: response.status,
+              status: statusCode,
               contentType,
               body,
               response: data,
             });
           }
 
-          const canFallbackGet = method === 'GET' && response.status >= 500;
+          const canFallbackGet = method === 'GET' && (statusCode >= 500 || statusCode === 404 || statusCode === 405);
           const canFallbackAuthMutation =
             method !== 'GET' &&
             isAuthMutationFallbackEndpoint(endpoint) &&
-            [404, 405].includes(response.status);
+            ([404, 405].includes(statusCode) || isInvalidApiPayload);
           const shouldTryNextUrl =
             urlIndex < requestUrls.length - 1 && (canFallbackGet || canFallbackAuthMutation);
           if (shouldTryNextUrl) {
