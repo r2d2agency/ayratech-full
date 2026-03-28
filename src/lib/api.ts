@@ -160,7 +160,7 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
         const isSameOriginAttempt = base === '';
         const shouldTryNextBase =
           baseIndex < baseCandidates.length - 1 &&
-          (method === 'GET' || (method !== 'GET' && isAuthMutationFallbackEndpoint(endpoint) && isSameOriginAttempt));
+          (method === 'GET' || (isAuthMutationFallbackEndpoint(endpoint) && isSameOriginAttempt));
         if (shouldTryNextBase) {
           lastError = error instanceof Error ? error : new Error('Erro de rede');
           break;
