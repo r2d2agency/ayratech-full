@@ -34,6 +34,7 @@ async function bootstrap() {
   app.enableCors({
     origin: (origin, callback) => {
       const allowedOrigins = [
+        'https://admin.ayratech.app.br',
         'https://ayratech.app.br',
         'https://www.ayratech.app.br',
         'https://api.ayratech.app.br',
@@ -46,10 +47,10 @@ async function bootstrap() {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
-      // Allow all origins for development/testing to prevent "Forbidden" errors
-      return callback(null, true);
-      
-      /* 
+      if (process.env.NODE_ENV !== 'production') {
+        return callback(null, true);
+      }
+
       if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
@@ -57,7 +58,6 @@ async function bootstrap() {
         console.warn(`Blocked CORS origin: ${origin}`);
         return callback(null, false);
       }
-      */
     },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,

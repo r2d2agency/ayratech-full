@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import { ViewType } from './types';
@@ -39,6 +39,7 @@ import { BrandingProvider, useBranding } from './context/BrandingContext';
 import { jwtDecode } from 'jwt-decode';
 
 const MainContent: React.FC<{ onLogout: () => void, userRole: string }> = ({ onLogout, userRole }) => {
+  const location = useLocation();
   const [activeView, setActiveView] = useState<ViewType>('dashboard');
   const [sidebarExpanded, setSidebarExpanded] = useState(window.innerWidth > 768);
 
@@ -59,6 +60,13 @@ const MainContent: React.FC<{ onLogout: () => void, userRole: string }> = ({ onL
   };
   
   const canViewEmployees = ['admin', 'rh', 'manager', 'superadmin', 'administrador do sistema', 'supervisor de operações'].includes(userRole);
+  const embedded = new URLSearchParams(location.search).get('embedded') === '1' || window.self !== window.top;
+
+  useEffect(() => {
+    const match = location.pathname.match(/^\/view\/([^/]+)/);
+    if (!match) return;
+    setActiveView(match[1] as ViewType);
+  }, [location.pathname]);
 
   // If user is client, force client_dashboard
   useEffect(() => {
@@ -68,6 +76,16 @@ const MainContent: React.FC<{ onLogout: () => void, userRole: string }> = ({ onL
   }, [userRole, activeView]);
 
   if (userRole === 'client') {
+    if (embedded) {
+      return (
+        <div className="min-h-screen bg-[color:var(--color-background)]">
+          <main className="max-w-[1600px] mx-auto w-full px-6 py-10 md:px-12">
+            <ClientDashboardView />
+          </main>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[color:var(--color-background)]">
         <Sidebar 
@@ -90,6 +108,57 @@ const MainContent: React.FC<{ onLogout: () => void, userRole: string }> = ({ onL
     );
   }
 
+  const content = (
+    <>
+      {activeView === 'dashboard' && <DashboardView />}
+      {activeView === 'rh_dashboard' && <RHDashboardView />}
+      {activeView === 'client_dashboard' && <ClientDashboardView />}
+      {activeView === 'clients' && <ClientsView />}
+      {activeView === 'products' && <ProductsView />}
+      {activeView === 'categories' && <CategoriesView />}
+      {activeView === 'brands' && <BrandsView />}
+      {activeView === 'competitors' && <CompetitorsView />}
+      {activeView === 'live_map' && <LiveMapView onNavigate={handleNavigate} />}
+      {activeView === 'routes' && <RoutesView />}
+      {activeView === 'checklist_templates' && <ChecklistTemplatesView />}
+      {activeView === 'stock_approvals' && <StockApprovalsView />}
+      {activeView === 'breakages_report' && <BreakagesReportView />}
+      {activeView === 'supermarkets_list' && <SupermarketsListView onNavigate={handleNavigate} />}
+      {activeView === 'supermarket_form' && <SupermarketFormView onNavigate={handleNavigate} />}
+      {activeView === 'supermarket_groups_list' && <SupermarketGroupsView onNavigate={handleNavigate} />}
+      {activeView === 'supermarket_group_form' && <SupermarketGroupFormView onNavigate={handleNavigate} />}
+      {activeView === 'employees' && (
+        <div className="animate-in fade-in duration-500">
+          <EmployeesView />
+        </div>
+      )}
+      {activeView === 'app_access' && (
+        canViewEmployees ? <AppAccessView /> : <div className="p-8 text-center text-red-500">Acesso não autorizado</div>
+      )}
+      {activeView === 'supervisors' && <SupervisorsView />}
+      {activeView === 'admin' && <AdminView />}
+      {activeView === 'documents' && <DocumentsView />}
+      {activeView === 'logs' && <SystemLogsView />}
+      {activeView === 'reports_routes' && <RoutesReportView />}
+      {activeView === 'reports_evidence' && <EvidenceReportView />}
+      {activeView === 'gallery' && <PhotoGalleryView />}
+      {activeView === 'photo_processing' && <PhotoProcessingView />}
+      {activeView === 'ai_config' && <AiConfigView />}
+      {activeView === 'ai_prompts' && <AiPromptsView />}
+      {activeView === 'time_clock' && <TimeClockManagementView />}
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="min-h-screen bg-[color:var(--color-background)]">
+        <main className="max-w-[1600px] mx-auto w-full px-6 py-10 md:px-12">
+          {content}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[color:var(--color-background)]">
       <Sidebar 
@@ -105,42 +174,7 @@ const MainContent: React.FC<{ onLogout: () => void, userRole: string }> = ({ onL
         <Header />
         
         <main className="max-w-[1600px] mx-auto w-full px-6 py-10 md:px-12">
-          {activeView === 'dashboard' && <DashboardView />}
-          {activeView === 'rh_dashboard' && <RHDashboardView />}
-          {activeView === 'client_dashboard' && <ClientDashboardView />}
-          {activeView === 'clients' && <ClientsView />}
-          {activeView === 'products' && <ProductsView />}
-          {activeView === 'categories' && <CategoriesView />}
-          {activeView === 'brands' && <BrandsView />}
-          {activeView === 'competitors' && <CompetitorsView />}
-          {activeView === 'live_map' && <LiveMapView onNavigate={handleNavigate} />}
-          {activeView === 'routes' && <RoutesView />}
-          {activeView === 'checklist_templates' && <ChecklistTemplatesView />}
-          {activeView === 'stock_approvals' && <StockApprovalsView />}
-          {activeView === 'breakages_report' && <BreakagesReportView />}
-          {activeView === 'supermarkets_list' && <SupermarketsListView onNavigate={handleNavigate} />}
-          {activeView === 'supermarket_form' && <SupermarketFormView onNavigate={handleNavigate} />}
-          {activeView === 'supermarket_groups_list' && <SupermarketGroupsView onNavigate={handleNavigate} />}
-          {activeView === 'supermarket_group_form' && <SupermarketGroupFormView onNavigate={handleNavigate} />}
-          {activeView === 'employees' && (
-            <div className="animate-in fade-in duration-500">
-              <EmployeesView />
-            </div>
-          )}
-          {activeView === 'app_access' && (
-            canViewEmployees ? <AppAccessView /> : <div className="p-8 text-center text-red-500">Acesso não autorizado</div>
-          )}
-          {activeView === 'supervisors' && <SupervisorsView />}
-          {activeView === 'admin' && <AdminView />}
-          {activeView === 'documents' && <DocumentsView />}
-          {activeView === 'logs' && <SystemLogsView />}
-          {activeView === 'reports_routes' && <RoutesReportView />}
-          {activeView === 'reports_evidence' && <EvidenceReportView />}
-          {activeView === 'gallery' && <PhotoGalleryView />}
-          {activeView === 'photo_processing' && <PhotoProcessingView />}
-          {activeView === 'ai_config' && <AiConfigView />}
-          {activeView === 'ai_prompts' && <AiPromptsView />}
-          {activeView === 'time_clock' && <TimeClockManagementView />}
+          {content}
         </main>
       </div>
     </div>

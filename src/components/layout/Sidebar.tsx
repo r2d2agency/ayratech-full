@@ -39,6 +39,7 @@ import {
   Ghost,
   FolderKanban,
   BarChart4,
+  Store,
 } from "lucide-react";
 import { API_URL, getAuthToken } from "@/lib/api";
 import gleegoLogo from "@/assets/gleego-logo.png";
@@ -137,6 +138,20 @@ const getNavSections = (hasConnections: boolean): NavSection[] => [
     items: [
       { name: "Cobrança", href: "/cobranca", icon: Receipt, pageKey: 'cobranca', moduleKey: 'billing' },
       { name: "Organizações", href: "/organizacoes", icon: Building2, pageKey: 'organizacoes' },
+    ],
+  },
+  {
+    title: "Manager",
+    icon: Store,
+    adminOnly: true,
+    items: [
+      { name: "Dashboard", href: "/supermarket/dashboard", icon: LayoutDashboard, adminOnly: true },
+      { name: "Mapa Ao Vivo", href: "/supermarket/live_map", icon: Map, adminOnly: true },
+      { name: "Rotas", href: "/supermarket/routes", icon: GitBranch, adminOnly: true },
+      { name: "Supermercados", href: "/supermarket/supermarkets_list", icon: Building2, adminOnly: true },
+      { name: "Aprovações", href: "/supermarket/stock_approvals", icon: ClipboardList, adminOnly: true },
+      { name: "Relatório Rotas", href: "/supermarket/reports_routes", icon: BarChart3, adminOnly: true },
+      { name: "Relatório Evidências", href: "/supermarket/reports_evidence", icon: BarChart3, adminOnly: true },
     ],
   },
 ];

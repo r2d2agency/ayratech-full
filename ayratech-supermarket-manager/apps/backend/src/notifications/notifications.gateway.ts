@@ -5,7 +5,13 @@ import { Logger } from '@nestjs/common';
 @WebSocketGateway({
   namespace: 'notifications',
   cors: {
-    origin: '*',
+    origin: [
+      'https://admin.ayratech.app.br',
+      'https://promotor.ayratech.app.br',
+      'http://localhost:5173',
+      'http://localhost:4173',
+      'http://localhost:5174',
+    ],
   },
 })
 export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisconnect {
