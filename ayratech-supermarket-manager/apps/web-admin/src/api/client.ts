@@ -1,4 +1,8 @@
-import axios from 'axios';
+import axios, { type InternalAxiosRequestConfig } from 'axios';
+
+type RetryableRequestConfig = InternalAxiosRequestConfig & {
+  _retriedWithoutApi?: boolean;
+};
 
 const ensureApiSuffix = (url: string) => {
   const normalized = url.replace(/\/+$/, '');
@@ -49,13 +53,32 @@ api.interceptors.request.use((config) => {
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
+  async (error) => {
+    const status = error.response?.status;
+    const config = error.config as RetryableRequestConfig | undefined;
+    const currentBase = String(config?.baseURL ?? api.defaults.baseURL ?? '');
+
+    const shouldRetryWithoutApi =
+      status === 404 &&
+      !!config &&
+      !config._retriedWithoutApi &&
+      typeof config.url === 'string' &&
+      !/^https?:\/\//i.test(config.url) &&
+      /\/api\/?$/.test(currentBase);
+
+    if (shouldRetryWithoutApi) {
+      config._retriedWithoutApi = true;
+      config.baseURL = currentBase.replace(/\/api\/?$/, '') || '/';
+      return api.request(config);
+    }
+
+    if (status === 401) {
       localStorage.removeItem('token');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
+
     return Promise.reject(error);
   }
 );
