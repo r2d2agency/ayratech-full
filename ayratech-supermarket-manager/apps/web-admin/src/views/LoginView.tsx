@@ -40,7 +40,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
 
       // 1. Tentar login como usuário comum
       try {
-        const response = await api.post('/auth/login', { email, password });
+        const response = await api.post('auth/login', { email, password });
         localStorage.setItem('token', response.data.access_token);
         onLogin();
         return;
@@ -55,7 +55,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
 
       // 2. Tentar login como cliente
-      const response = await api.post('/auth/client/login', { email, password });
+      const response = await api.post('auth/client/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
       onLogin();
 
@@ -73,7 +73,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
     try {
-      await api.post('/auth/register', { email, password });
+      await api.post('auth/register', { email, password });
       alert('Usuário criado com sucesso! Agora clique em Entrar.');
       setError('');
     } catch (err: any) {
@@ -96,8 +96,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       return;
     }
     try {
-      await api.post('/auth/reset', { email, password }, { headers: { 'x-admin-reset': 'AYRATECH_DEV_RESET' } });
-      const response = await api.post('/auth/login', { email, password });
+      await api.post('auth/reset', { email, password }, { headers: { 'x-admin-reset': 'AYRATECH_DEV_RESET' } });
+      const response = await api.post('auth/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
       onLogin();
     } catch (err: any) {

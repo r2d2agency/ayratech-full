@@ -1,5 +1,10 @@
 import axios from 'axios';
 
+const ensureApiSuffix = (url: string) => {
+  const normalized = url.replace(/\/+$/, '');
+  return normalized.endsWith('/api') ? normalized : `${normalized}/api`;
+};
+
 const normalizeApiUrl = (value?: string) => {
   let url = String(value ?? '').trim();
 
@@ -11,23 +16,20 @@ const normalizeApiUrl = (value?: string) => {
     const cleaned = url.replace(/^\.+/, '').replace(/^\/+|\/+$/g, '');
 
     if (cleaned.includes('.')) {
-      url = `https://${cleaned}`;
-    } else {
-      return `/${cleaned || 'api'}`;
+      return ensureApiSuffix(`https://${cleaned}`);
     }
+
+    return `/${cleaned || 'api'}`;
   }
 
   try {
     const parsed = new URL(url);
+    const absoluteUrl = `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
     const isLocalhost = ['localhost', '127.0.0.1'].includes(parsed.hostname);
 
-    if (!isLocalhost && (!parsed.pathname || parsed.pathname === '/')) {
-      parsed.pathname = '/api';
-    }
-
-    return parsed.toString().replace(/\/$/, '');
+    return isLocalhost ? absoluteUrl : ensureApiSuffix(absoluteUrl);
   } catch {
-    return url.replace(/\/$/, '');
+    return ensureApiSuffix(url);
   }
 };
 
