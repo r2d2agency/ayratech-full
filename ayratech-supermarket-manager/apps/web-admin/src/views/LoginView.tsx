@@ -55,7 +55,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onLogin }) => {
       }
 
       // 2. Tentar login como cliente
-      const response = await api.post('/auth/client/login', { email, password });
+      const response = await api.post('auth/client/login', { email, password });
       localStorage.setItem('token', response.data.access_token);
       onLogin();
 
